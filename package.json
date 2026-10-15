@@ -1,0 +1,54 @@
+{
+  "name": "dsh-manuscript",
+  "version": "0.1.0",
+  "description": "稿本：给 DeepSeek Harness 补上回答署名、修订分支与常驻大纲侧栏",
+  "type": "module",
+  "license": "MIT",
+  "author": "Shellexy",
+  "homepage": "https://github.com/shellexy/dsh-manuscript#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shellexy/dsh-manuscript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shellexy/dsh-manuscript/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "branch",
+    "outline"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.19"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-chat",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  }
+}
