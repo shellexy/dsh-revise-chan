@@ -1,7 +1,7 @@
 /**
- * dsh-manuscript — Host half.
+ * dsh-revise-chan — Host half.
  *
- * Provides the `manuscript` Remote namespace with two direct endpoints:
+ * Provides the `revise-chan` Remote namespace with two direct endpoints:
  *
  * - `plan` — locate the surface-visible assistant message a revision targets and
  *   report the source `user/message` seq the branch may cut at.
@@ -22,7 +22,7 @@
  * `TypertRemoteService` would install, because a bundle linked into a profile
  * cannot resolve Harness package specifiers at import time.
  *
- * @module dsh-manuscript
+ * @module dsh-revise-chan
  */
 
 /**
@@ -32,7 +32,7 @@
 const REMOTE_METHODS_DESCRIPTOR = '@deepseek-ai/dsh-typert-protocol/remote-methods'
 
 /** Cordis service name, Typert namespace, and Remote endpoint prefix. */
-const SERVICE_NAME = 'manuscript'
+const SERVICE_NAME = 'revise-chan'
 
 /** Services this plugin reads. */
 export const inject = ['sessions']
@@ -80,8 +80,8 @@ function revisedContent(original, text) {
   return content
 }
 
-/** The `manuscript` Remote namespace: revision planning and the revised turn. */
-class ManuscriptService {
+/** The `revise-chan` Remote namespace: revision planning and the revised turn. */
+class ReviseChanService {
   /**
    * @param ctx - owning Host context with the session store.
    */
@@ -227,7 +227,7 @@ class ManuscriptService {
 
 // The Remote method markers the `@Remote('plan')` / `@Remote('revise')`
 // decorators would install at class-definition time.
-Object.defineProperty(ManuscriptService.prototype, REMOTE_METHODS_DESCRIPTOR, {
+Object.defineProperty(ReviseChanService.prototype, REMOTE_METHODS_DESCRIPTOR, {
   configurable: true,
   value: Object.freeze({
     version: 1,
@@ -239,9 +239,9 @@ Object.defineProperty(ManuscriptService.prototype, REMOTE_METHODS_DESCRIPTOR, {
 })
 
 /**
- * Register the `manuscript` service for this Host composition.
+ * Register the `revise-chan` service for this Host composition.
  * @param ctx - the plugin's Host context.
  */
 export function apply(ctx) {
-  ctx.provide(SERVICE_NAME, new ManuscriptService(ctx))
+  ctx.provide(SERVICE_NAME, new ReviseChanService(ctx))
 }

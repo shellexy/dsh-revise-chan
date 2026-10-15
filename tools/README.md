@@ -13,10 +13,10 @@ bash tools/verify-all.sh --e2e    # 再启一个一次性 profile，走真实 Ty
 
 | 脚本 | 验证什么 | 需要什么 |
 |---|---|---|
-| `verify-host.mjs` | Typert Gateway 的 SRC 发现规则能否从活着的服务上 claim `manuscript/plan` / `manuscript/revise`（binding 形状、Remote marker、参数名反射），以及 `plan` / `revise` 在事件形状真实的会话上的行为与全部业务错误码 | 能解析 dsh 包（见下） |
+| `verify-host.mjs` | Typert Gateway 的 SRC 发现规则能否从活着的服务上 claim `revise-chan/plan` / `revise-chan/revise`（binding 形状、Remote marker、参数名反射），以及 `plan` / `revise` 在事件形状真实的会话上的行为与全部业务错误码 | 能解析 dsh 包（见下） |
 | `verify-engine.mjs` | 用真实的 `@deepseek-ai/dsh-session`：`buildForkSeed` 切在提问处 → 分支折叠为 `[提问1, 回答1, 提问2]`；追加修订轮后折叠为 `[提问1, 回答1, 提问2, 修订稿]`；继承前缀逐事件与来源一致 | 能解析 dsh 包 |
 | `verify-client.mjs` | Browser 半：`apply` 只注册六个槽位项与一个右侧栏页类型；署名/铅笔/对话框/大纲页用真实 slot props 渲染出的元素树；`saveRevision` 发出的 RPC 载荷、fork 参数、改名与归档顺序、标题字节预算、业务失败的本地化文案 | 只需 Node（自带 React stand-in） |
-| `verify-e2e.sh` | 端到端：在 `.tmp/` 里造一个只含 `dsh-base` 的一次性 `DSH_HOME`，把**工作副本**按绝对路径插进去启动，用 `ctx.typertGateway.invoke({ namespace: 'manuscript', … , args: { request } })` 真调 `plan` / `revise`，并断言分支折叠与 `turnBoundary.lastTurn` | `dsh` 在 PATH 上；不需要模型与凭据 |
+| `verify-e2e.sh` | 端到端：在 `.tmp/` 里造一个只含 `dsh-base` 的一次性 `DSH_HOME`，把**工作副本**按绝对路径插进去启动，用 `ctx.typertGateway.invoke({ namespace: 'revise-chan', … , args: { request } })` 真调 `plan` / `revise`，并断言分支折叠与 `turnBoundary.lastTurn` | `dsh` 在 PATH 上；不需要模型与凭据 |
 
 ## 模块解析
 

@@ -1,6 +1,8 @@
-# dsh-manuscript
+# dsh-revise-chan
 
 English | [中文](README.md)
+
+**Edit an AI answer's content in dsh, and keep the outline always visible.**
 
 Three things that make a [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) conversation behave like an editable manuscript: **byline**, **revision**, **outline**.
 
@@ -15,23 +17,23 @@ Three things that make a [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 From npm:
 
 ```bash
-dsh plugin --profile web add dsh-manuscript
+dsh plugin --profile web add dsh-revise-chan
 ```
 
 Straight from GitHub:
 
 ```bash
-dsh plugin --profile web add github:shellexy/dsh-manuscript
+dsh plugin --profile web add github:shellexy/dsh-revise-chan
 ```
 
 From a local checkout (no build step needed):
 
 ```bash
-git clone https://github.com/shellexy/dsh-manuscript.git
-dsh plugin --profile web add ./dsh-manuscript
+git clone https://github.com/shellexy/dsh-revise-chan.git
+dsh plugin --profile web add ./dsh-revise-chan
 ```
 
-Restart the running `dsh web` afterwards: the Host half has to load the `manuscript` Remote. The Browser half only needs a page refresh.
+Restart the running `dsh web` afterwards: the Host half has to load the `revise-chan` Remote. The Browser half only needs a page refresh.
 
 ## Compatibility
 
@@ -42,9 +44,9 @@ Restart the running `dsh web` afterwards: the Host half has to load the `manuscr
 
 A dsh session log is append-only and deep-frozen, and `assistant/message` **cannot** be surface-replaced (the operation must cite the node it shadows, while that event type forbids `sourceEventSeqs`). Rewriting the answer in place is therefore impossible on 0.2.x. 稿本 takes a fully declared route instead:
 
-1. `manuscript/plan` finds the **human prompt** of the turn whose answer was edited (only a `user/message` with `source.kind === 'user'` counts — injected context does not).
+1. `revise-chan/plan` finds the **human prompt** of the turn whose answer was edited (only a `user/message` with `source.kind === 'user'` counts — injected context does not).
 2. The Browser half forks there with `sessions.fork({ atSeq })`: the child inherits everything through the prompt — the question is still there, the original answer is not, and the fork's own synthetic plain `turn/end` closes the cut turn.
-3. `manuscript/revise` **appends** one complete turn to that live child: `turn/start` (reusing the edited turn's number) → `step/start` → `assistant/message` (your text, same message id / provider / model, reasoning and images kept, tool calls dropped) → `step/end` → `turn/end`.
+3. `revise-chan/revise` **appends** one complete turn to that live child: `turn/start` (reusing the edited turn's number) → `step/start` → `assistant/message` (your text, same message id / provider / model, reasoning and images kept, tool calls dropped) → `step/end` → `turn/end`.
 
 One real revision looks like this in the log:
 
@@ -76,9 +78,9 @@ The model-visible surface (the canonical fold) reads `…, question, revised ans
 
 | File | Role |
 |---|---|
-| `index.js` | Host half: the `manuscript` Remote namespace (`plan` / `revise`). The Remote method marker is installed directly as the `@deepseek-ai/dsh-typert-protocol/remote-methods` descriptor, so plain JavaScript needs neither decorators nor generated typert output. |
+| `index.js` | Host half: the `revise-chan` Remote namespace (`plan` / `revise`). The Remote method marker is installed directly as the `@deepseek-ai/dsh-typert-protocol/remote-methods` descriptor, so plain JavaScript needs neither decorators nor generated typert output. |
 | `client.js` | Browser half: byline and edit action (`conversation.chat.assistant-actions`), editor dialog (`shell.overlay`), outline toggle (`conversation.session.header.utilities`) and outline page (`sidebar.right.pane.tab`). |
-| `cordis.patch.yml` | Inserts the `dsh-manuscript` row into the profile's Loader configuration. |
+| `cordis.patch.yml` | Inserts the `dsh-revise-chan` row into the profile's Loader configuration. |
 
 The Browser half only `require`s `react` and imports no Harness Client package; all styling uses `--dsw-*` theme tokens and all copy goes through `locale.register` dictionaries (Chinese + English).
 
@@ -87,7 +89,7 @@ The Browser half only `require`s `react` and imports no Harness Client package; 
 `dsh plugin add <local path>` installs a `link:`, so Node resolves bare specifiers from the **real** path of this directory — where `@deepseek-ai/dsh-typert-protocol` and friends cannot be found (the row then fails with "failed to import"). So the Host half installs what those helpers would install:
 
 - the Remote method marker is a prototype descriptor `'@deepseek-ai/dsh-typert-protocol/remote-methods'` holding `{ version: 1, methods: [{ method, invocation: { kind: 'direct' } }] }`;
-- the service is registered with `ctx.provide('manuscript', instance)`, and the instance carries `typertRemote = { service, serviceKey, namespace }`.
+- the service is registered with `ctx.provide('revise-chan', instance)`, and the instance carries `typertRemote = { service, serviceKey, namespace }`.
 
 That is exactly what the gateway's source-mode discovery reads, so the behaviour matches `TypertRemoteService` + the `@Remote` decorator.
 
@@ -102,7 +104,7 @@ bash tools/verify-all.sh --e2e    # also boots a throwaway dsh profile
 
 Verified on dsh `0.2.0-rc.2`:
 
-- **Real gateway** — `ctx.typertGateway.invoke({ namespace: 'manuscript', method: 'plan' | 'revise', args: { request } })` resolves and runs; the branch folds to `[question, revised answer]` and `turnBoundary.lastTurn` keeps the edited turn's number.
+- **Real gateway** — `ctx.typertGateway.invoke({ namespace: 'revise-chan', method: 'plan' | 'revise', args: { request } })` resolves and runs; the branch folds to `[question, revised answer]` and `turnBoundary.lastTurn` keeps the edited turn's number.
 - **Real engine** — `buildForkSeed` + `Session.create` reproduce the branch, and `deriveMessages()` matches the fold above.
 - **Browser half** — every registered entry renders from realistic slot props, `saveRevision` emits the expected RPC payloads / fork / renames / archive / open, and all six contributions are live (`active: true`) on a running page.
 - **Not verified** — visual layout, colours and hover feel in a real browser; that part needs human eyes.

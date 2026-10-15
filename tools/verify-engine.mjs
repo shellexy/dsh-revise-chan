@@ -2,7 +2,7 @@
 /**
  * Verify the revision against the real session engine: fork a two-turn log at
  * its second human prompt with `buildForkSeed`, append the revised turn the way
- * `manuscript/revise` does, and assert what the surface fold then reads.
+ * `revise-chan/revise` does, and assert what the surface fold then reads.
  *
  * This is the engine-level proof that the branch carries the original question
  * and the edited answer while no earlier event is rewritten.
@@ -95,7 +95,7 @@ check('the source session reads as two complete turns', () => {
   assertEqual(readSurface(parent), [['user', 'first question'], ['assistant', 'first answer'], ['user', 'second question'], ['assistant', 'second answer']], 'source fold differs')
 })
 
-// ── Fork at the edited turn's prompt (what `manuscript/plan` reports) ───────
+// ── Fork at the edited turn's prompt (what `revise-chan/plan` reports) ───────
 const promptSeq = parent.snapshotEvents().find(event => event.type === 'user/message' && event.data.id === 'u2').seq
 const childHeader = {
   version: SESSION_FORMAT_VERSION,

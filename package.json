@@ -1,17 +1,17 @@
 {
-  "name": "dsh-manuscript",
-  "version": "0.1.0",
-  "description": "稿本：给 DeepSeek Harness 补上回答署名、修订分支与常驻大纲侧栏",
+  "name": "dsh-revise-chan",
+  "version": "0.2.0",
+  "description": "让 dsh 可以修改 AI 回答内容 + 固定显示大纲：回答署名、修订分支、常驻大纲侧栏",
   "type": "module",
   "license": "MIT",
   "author": "Shellexy",
-  "homepage": "https://github.com/shellexy/dsh-manuscript#readme",
+  "homepage": "https://github.com/shellexy/dsh-revise-chan#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shellexy/dsh-manuscript.git"
+    "url": "git+https://github.com/shellexy/dsh-revise-chan.git"
   },
   "bugs": {
-    "url": "https://github.com/shellexy/dsh-manuscript/issues"
+    "url": "https://github.com/shellexy/dsh-revise-chan/issues"
   },
   "keywords": [
     "dsh",
@@ -19,6 +19,7 @@
     "deepseek-harness",
     "cordis",
     "plugin",
+    "revise",
     "branch",
     "outline"
   ],

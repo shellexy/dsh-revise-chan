@@ -1,6 +1,8 @@
-# dsh-manuscript（稿本）
+# dsh-revise-chan（修订酱）
 
 [English](README_EN.md) | 中文
+
+**让 dsh 可以修改 AI 回答内容 + 固定显示大纲。**
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）的对话补上三件「把回答当文稿来管」的事：**署名**、**修订**、**目录**。
 
@@ -15,23 +17,23 @@
 从 npm：
 
 ```bash
-dsh plugin --profile web add dsh-manuscript
+dsh plugin --profile web add dsh-revise-chan
 ```
 
 直接从 GitHub：
 
 ```bash
-dsh plugin --profile web add github:shellexy/dsh-manuscript
+dsh plugin --profile web add github:shellexy/dsh-revise-chan
 ```
 
 本地源码（改完即用，无需构建）：
 
 ```bash
-git clone https://github.com/shellexy/dsh-manuscript.git
-dsh plugin --profile web add ./dsh-manuscript
+git clone https://github.com/shellexy/dsh-revise-chan.git
+dsh plugin --profile web add ./dsh-revise-chan
 ```
 
-装完重启正在运行的 `dsh web`（Host 半需要重启才能加载 `manuscript` Remote；Browser 半刷新页面即生效）。
+装完重启正在运行的 `dsh web`（Host 半需要重启才能加载 `revise-chan` Remote；Browser 半刷新页面即生效）。
 
 ## 兼容性
 
@@ -42,9 +44,9 @@ dsh plugin --profile web add ./dsh-manuscript
 
 dsh 的会话日志是只追加、深度冻结的，而且 `assistant/message` **不能**做 surface replacement（它要求引用被遮蔽的节点，又禁止携带 `sourceEventSeqs`），所以「改写历史里那条回答」在 0.2.x 上无法字面实现。稿本改用一条完全申报的路径：
 
-1. `manuscript/plan` 在来源会话的日志里定位这条回答所属轮次的**人类提问**事件序号（只有 `source.kind === 'user'` 的 `user/message` 才算）。
+1. `revise-chan/plan` 在来源会话的日志里定位这条回答所属轮次的**人类提问**事件序号（只有 `source.kind === 'user'` 的 `user/message` 才算）。
 2. Browser 半在那一格 `sessions.fork({ atSeq })`——子会话原样继承到提问为止：提问还在，原回答不在，子会话自己的 `turn/end` 由 fork 合成闭包补上。
-3. `manuscript/revise` 往这个还活着的子会话里**追加**一个完整轮次：`turn/start`（沿用该轮轮次号）→ `step/start` → `assistant/message`（正文＝你的修订稿，沿用原消息 id、provider、model，保留思考块与图片，丢弃工具调用）→ `step/end` → `turn/end`。
+3. `revise-chan/revise` 往这个还活着的子会话里**追加**一个完整轮次：`turn/start`（沿用该轮轮次号）→ `step/start` → `assistant/message`（正文＝你的修订稿，沿用原消息 id、provider、model，保留思考块与图片，丢弃工具调用）→ `step/end` → `turn/end`。
 
 一次真实修订在日志里长这样：
 
@@ -76,9 +78,9 @@ revise 追加
 
 | 文件 | 职责 |
 |---|---|
-| `index.js` | Host 半：`manuscript` Remote 命名空间（`plan` / `revise`）。Remote marker 直接按 `@deepseek-ai/dsh-typert-protocol/remote-methods` 的描述符安装，因此纯 JavaScript 无需装饰器或 typert 生成物。 |
+| `index.js` | Host 半：`revise-chan` Remote 命名空间（`plan` / `revise`）。Remote marker 直接按 `@deepseek-ai/dsh-typert-protocol/remote-methods` 的描述符安装，因此纯 JavaScript 无需装饰器或 typert 生成物。 |
 | `client.js` | Browser 半：署名与编辑按钮（`conversation.chat.assistant-actions`）、编辑对话框（`shell.overlay`）、大纲按钮（`conversation.session.header.utilities`）与大纲页（`sidebar.right.pane.tab`）。 |
-| `cordis.patch.yml` | 把 `dsh-manuscript` 这一行插进 profile 的 Loader 配置。 |
+| `cordis.patch.yml` | 把 `dsh-revise-chan` 这一行插进 profile 的 Loader 配置。 |
 
 Browser 半只 `require('react')`，不引用任何 Harness Client 包；样式全部走 `--dsw-*` 主题 token，界面文案走 `locale.register` 的中英文词典。
 
@@ -87,7 +89,7 @@ Browser 半只 `require('react')`，不引用任何 Harness Client 包；样式�
 `dsh plugin add <本地路径>` 装进 profile 的是 `link:`，Node 会从**真实路径**解析裸包名，于是 `@deepseek-ai/dsh-typert-protocol` 这类包解析不到（加载时报 "failed to import"）。所以 Host 半不 import：
 
 - Remote 方法标记 = 往原型上装一个 `'@deepseek-ai/dsh-typert-protocol/remote-methods'` 描述符（`{ version: 1, methods: [{ method, invocation: { kind: 'direct' } }] }`）；
-- 服务注册 = `ctx.provide('manuscript', instance)`，实例自挂 `typertRemote = { service, serviceKey, namespace }`。
+- 服务注册 = `ctx.provide('revise-chan', instance)`，实例自挂 `typertRemote = { service, serviceKey, namespace }`。
 
 网关的 SRC 发现读的就是这两样东西，行为与 `TypertRemoteService` + `@Remote` 装饰器等价。
 
@@ -102,7 +104,7 @@ bash tools/verify-all.sh --e2e    # 再启一次性 profile 走真实网关
 
 在 dsh `0.2.0-rc.2` 上的结论：
 
-- **真实网关**：`ctx.typertGateway.invoke({ namespace: 'manuscript', method: 'plan' | 'revise', args: { request } })` 可解析并执行；分支折叠为 `[提问, 修订后的回答]`，`turnBoundary.lastTurn` 保持原轮次号（后续轮次不撞号）。
+- **真实网关**：`ctx.typertGateway.invoke({ namespace: 'revise-chan', method: 'plan' | 'revise', args: { request } })` 可解析并执行；分支折叠为 `[提问, 修订后的回答]`，`turnBoundary.lastTurn` 保持原轮次号（后续轮次不撞号）。
 - **真实引擎**：`buildForkSeed` + `Session.create` 复现「提问处 fork + 追加同轮修订回答」，`deriveMessages()` 与上面一致，且继承前缀逐事件与来源相同。
 - **Browser 半**：每个注册入口都能用真实 slot props 渲染出预期元素树，`saveRevision` 发出的 RPC 载荷 / fork / 改名 / 归档 / 打开分支全部符合预期，并且六个槽位项在运行中的页面上都是 `active: true`。
 - **未验证**：真实浏览器里的布局、配色与悬停观感——那部分需要人眼。

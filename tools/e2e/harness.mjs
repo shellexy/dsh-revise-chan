@@ -2,7 +2,7 @@
  * Probe plugin for `tools/verify-e2e.sh`.
  *
  * It boots inside a throwaway dsh profile, builds one source session holding a
- * finished turn, then invokes `manuscript/plan` and `manuscript/revise` through
+ * finished turn, then invokes `revise-chan/plan` and `revise-chan/revise` through
  * the **real** Typert Gateway exactly as the Browser half does
  * (`{ args: { request } }`), forks the branch the way the Client asks for it
  * (`SessionStore.fork` at the prompt seq), and prints what the branch folds to.
@@ -56,7 +56,7 @@ async function run(ctx) {
     source.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
 
     const planned = await ctx.typertGateway.invoke({
-      namespace: 'manuscript',
+      namespace: 'revise-chan',
       method: 'plan',
       args: { request: { sessionId: SOURCE_ID, messageId: MESSAGE_ID } },
     })
@@ -68,7 +68,7 @@ async function run(ctx) {
     console.log('PROBE child before =>', JSON.stringify(child.deriveMessages().map(message => [message.role, message.content?.[0]?.text])))
 
     const revised = await ctx.typertGateway.invoke({
-      namespace: 'manuscript',
+      namespace: 'revise-chan',
       method: 'revise',
       args: { request: { sourceSessionId: SOURCE_ID, childSessionId: CHILD_ID, messageId: MESSAGE_ID, text: ANSWER } },
     })
@@ -78,7 +78,7 @@ async function run(ctx) {
     console.log('PROBE child turn boundary =>', JSON.stringify(ctx.sessionProjections.stateOf(child, 'turnBoundary')))
 
     const missing = await ctx.typertGateway.invoke({
-      namespace: 'manuscript',
+      namespace: 'revise-chan',
       method: 'plan',
       args: { request: { sessionId: 'session-nope', messageId: MESSAGE_ID } },
     })

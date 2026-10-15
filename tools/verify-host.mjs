@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Verify the Host half: the Typert Gateway's source-mode discovery rule must
- * claim `manuscript/plan` and `manuscript/revise` off the live service, and the
+ * claim `revise-chan/plan` and `revise-chan/revise` off the live service, and the
  * two operations must behave on a session whose events are shaped like a real
  * log (including an injected-context `user/message` the prompt filter must skip).
  *
@@ -133,7 +133,7 @@ store.flush = async () => { store.flushes += 1; return true }
 const root = new Context()
 root.plugin({ name: 'verify-host-stub-sessions', apply(ctx) { ctx.provide('sessions', store) } })
 await tick()
-root.plugin({ name: 'dsh-manuscript-host', inject: plugin.inject, apply: plugin.apply })
+root.plugin({ name: 'dsh-revise-chan-host', inject: plugin.inject, apply: plugin.apply })
 await tick()
 
 // ── The gateway's source-mode discovery rule, reproduced ────────────────────
@@ -168,13 +168,13 @@ function parameterNames(service, method) {
   return body === '' ? [] : body.split(',').map(part => part.trim())
 }
 
-const service = root.get('manuscript')
-check('manuscript service is provided', () => assert(service !== undefined, 'ctx.get("manuscript") is undefined'))
+const service = root.get('revise-chan')
+check('revise-chan service is provided', () => assert(service !== undefined, 'ctx.get("revise-chan") is undefined'))
 check('typertRemote binding matches the service key and namespace', () => {
   const binding = service.typertRemote
   assert(binding.service === service, 'binding.service is not the service instance')
-  assert(binding.serviceKey === 'manuscript', `binding.serviceKey is ${String(binding.serviceKey)}`)
-  assert(binding.namespace === 'manuscript', `binding.namespace is ${String(binding.namespace)}`)
+  assert(binding.serviceKey === 'revise-chan', `binding.serviceKey is ${String(binding.serviceKey)}`)
+  assert(binding.namespace === 'revise-chan', `binding.namespace is ${String(binding.namespace)}`)
 })
 check('discovery claims plan/revise as direct endpoints with a request wire field', () => {
   const claims = remoteMethods(service).map(marker => ({
@@ -183,8 +183,8 @@ check('discovery claims plan/revise as direct endpoints with a request wire fiel
     wire: parameterNames(service, marker.method),
   }))
   assertEqual(claims, [
-    { endpoint: 'manuscript/plan', invocation: 'direct', wire: ['request'] },
-    { endpoint: 'manuscript/revise', invocation: 'direct', wire: ['request'] },
+    { endpoint: 'revise-chan/plan', invocation: 'direct', wire: ['request'] },
+    { endpoint: 'revise-chan/revise', invocation: 'direct', wire: ['request'] },
   ], 'claimed endpoints differ')
 })
 

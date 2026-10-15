@@ -82,7 +82,7 @@ const services = {
       call: async (channel, endpoint, payload) => {
         calls.rpc.push({ channel, endpoint, payload })
         // Wire shape: the carrier result wraps the business result.
-        const business = endpoint === 'manuscript/plan'
+        const business = endpoint === 'revise-chan/plan'
           ? { ok: true, value: { turn: 3, forkSeq: 41, messageTime: 1_700_000_000_000 } }
           : { ok: true, value: { turn: 3, seq: 9 } }
         return { ok: true, value: business }
@@ -121,16 +121,16 @@ const bySlot = name => registrations.filter(row => row.name === name)
 check('the plugin declares only the seats it uses', () => assertEqual(api.inject, ['slots', 'locale'], 'inject list differs'))
 check('every contribution lands in its published seat', () => {
   assertEqual(registrations.map(row => `${row.name}:${row.id ?? row.key}`), [
-    'conversation.chat.assistant-actions:manuscript-byline',
-    'conversation.chat.assistant-actions:manuscript-edit',
-    'shell.overlay:manuscript-editor',
-    'conversation.session.header.utilities:manuscript-outline',
-    'sidebar.right.pane.tab:dsh-manuscript-outline',
-    'sidebar.right.pane.tab.title:dsh-manuscript-outline',
+    'conversation.chat.assistant-actions:revise-chan-byline',
+    'conversation.chat.assistant-actions:revise-chan-edit',
+    'shell.overlay:revise-chan-editor',
+    'conversation.session.header.utilities:revise-chan-outline',
+    'sidebar.right.pane.tab:dsh-revise-chan-outline',
+    'sidebar.right.pane.tab.title:dsh-revise-chan-outline',
   ], 'contributions differ')
 })
 check('the outline page type registers with the registry', () => {
-  assertEqual([services.tabDefinition.id, services.tabDefinition.kind, services.tabDefinition.priority], ['dsh-manuscript-outline', 'manuscript-outline', 'builtin'], 'page type differs')
+  assertEqual([services.tabDefinition.id, services.tabDefinition.kind, services.tabDefinition.priority], ['dsh-revise-chan-outline', 'revise-chan-outline', 'builtin'], 'page type differs')
 })
 
 // ── Rendering through the entries ──────────────────────────────────────────
@@ -199,7 +199,7 @@ check('the outline toggle hides when no page type is in force', () => {
 })
 check('the outline toggle opens the outline page', () => {
   render(headerRow, headerFace).props.children[1].props.onClick()
-  assertEqual(calls.tabOpened, 'manuscript-outline', 'openTab got the wrong kind')
+  assertEqual(calls.tabOpened, 'revise-chan-outline', 'openTab got the wrong kind')
 })
 
 check('the outline lists every turn with its previews', () => {
@@ -225,7 +225,7 @@ check('saving asks the Host where to cut, then forks there', () => {
   assertEqual(saved, 'session-child', 'saveRevision did not return the branch')
   assertEqual(calls.rpc[0], {
     channel: '/api',
-    endpoint: 'manuscript/plan',
+    endpoint: 'revise-chan/plan',
     payload: { args: { request: { sessionId: 'session-1', messageId: 'msg-9' } } },
   }, 'plan call differs')
   assertEqual(calls.fork, [{ sessionId: 'session-1', atSeq: 41 }], 'fork call differs')
@@ -233,7 +233,7 @@ check('saving asks the Host where to cut, then forks there', () => {
 check('saving then asks the Host to append the revised turn in the branch', () => {
   assertEqual(calls.rpc[1], {
     channel: '/api',
-    endpoint: 'manuscript/revise',
+    endpoint: 'revise-chan/revise',
     payload: { args: { request: { sourceSessionId: 'session-1', childSessionId: 'session-child', messageId: 'msg-9', text: 'REVISED answer' } } },
   }, 'revise call differs')
 })
@@ -252,7 +252,7 @@ check('the branch is stamped with the save time and the source with the answer t
     assert(new TextEncoder().encode(row.title).length <= 80, `title exceeds the session-title byte budget: ${row.title}`)
   }
   const sources = calls.renames.filter(row => row.source !== undefined)
-  assertEqual([...new Set(sources.map(row => row.source))], ['manuscript'], 'reference source differs')
+  assertEqual([...new Set(sources.map(row => row.source))], ['revise-chan'], 'reference source differs')
 })
 check('the source is archived and the branch opened', () => {
   assertEqual([calls.archive, calls.open], [['session-1'], ['session-child']], 'archive/open differ')

@@ -81,7 +81,7 @@ export async function importPluginHost() {
  */
 export async function importPluginClient() {
   let api
-  globalThis.__manuscriptReactStub = reactStub
+  globalThis.__reviseChanReactStub = reactStub
   globalThis.window = {
     __ModuleLoader__: {
       load: ({ factory }) => {

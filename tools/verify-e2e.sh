@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verify the whole chain through the real Harness: boot a throwaway dsh profile
 # with the Plugin installed, and have tools/e2e/harness.mjs invoke
-# `manuscript/plan` and `manuscript/revise` through the real Typert Gateway.
+# `revise-chan/plan` and `revise-chan/revise` through the real Typert Gateway.
 #
 # Usage: bash tools/verify-e2e.sh
 #   Requires `dsh` on PATH (any 0.2.x install) and writes only under .tmp/.
@@ -13,7 +13,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(dirname "$here")"
 home="$root/.tmp/e2e/dsh-home"
-profile="$home/profiles/manuscript-e2e"
+profile="$home/profiles/revise-chan-e2e"
 log="$root/.tmp/e2e/output.log"
 
 if ! command -v dsh >/dev/null 2>&1; then
@@ -27,7 +27,7 @@ mkdir -p "$profile"
 # A throwaway DSH_HOME: only dsh-base plus the two root rows below.
 cat >"$profile/package.json" <<JSON
 {
-  "name": "dsh-profile-manuscript-e2e",
+  "name": "dsh-profile-revise-chan-e2e",
   "private": true,
   "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base"] } }
 }
@@ -38,14 +38,14 @@ echo '[]' >"$profile/cordis.yml"
 # working copy under test rather than an installed copy.
 cat >"$profile/cordis.patch.yml" <<YAML
 - insert:
-    - id: manuscript-under-test
+    - id: revise-chan-under-test
       name: $root/index.js
-    - id: manuscript-e2e-harness
+    - id: revise-chan-e2e-harness
       name: $here/e2e/harness.mjs
 YAML
 
 echo "▶ booting a throwaway profile with $root/index.js"
-DSH_HOME="$home" dsh --profile manuscript-e2e >"$log" 2>&1 || true
+DSH_HOME="$home" dsh --profile revise-chan-e2e >"$log" 2>&1 || true
 cat "$log"
 
 fail=0
@@ -59,8 +59,8 @@ expect() {
   fi
 }
 
-expect 'PROBE plan => {"ok":true,"value":{"turn":1,"forkSeq":1' 'the real gateway resolves manuscript/plan and cuts at the prompt'
-expect 'PROBE revise => {"ok":true,"value":{"turn":1' 'the real gateway resolves manuscript/revise'
+expect 'PROBE plan => {"ok":true,"value":{"turn":1,"forkSeq":1' 'the real gateway resolves revise-chan/plan and cuts at the prompt'
+expect 'PROBE revise => {"ok":true,"value":{"turn":1' 'the real gateway resolves revise-chan/revise'
 expect 'PROBE child before => [["user","probe question?"]]' 'the branch inherits the question without the answer'
 expect 'PROBE child after => [["user","probe question?"],["assistant","REVISED answer"]]' 'the branch reads as question + edited answer'
 expect 'PROBE child turn boundary => {"openTurnStartSeq":null' 'the branch closes its own turn'

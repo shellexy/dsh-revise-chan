@@ -1,5 +1,5 @@
 /**
- * dsh-manuscript — Browser half.
+ * dsh-revise-chan — Browser half.
  *
  * Three contributions, all through published extension points:
  *
@@ -8,8 +8,8 @@
  *    beside the built-in copy control.
  * 2. `shell.overlay` — the frame-wide editor dialog the edit action opens. Saving
  *    runs one revision transaction: ask the Host where the branch may cut
- *    (`manuscript/plan`), fork there, let the Host append the revised turn
- *    (`manuscript/revise`), then rename the branch, rename and archive the source
+ *    (`revise-chan/plan`), fork there, let the Host append the revised turn
+ *    (`revise-chan/revise`), then rename the branch, rename and archive the source
  *    session, and open the branch.
  * 3. `sidebar.right.pane.tab` + `conversation.session.header.utilities` — an
  *    always-visible outline page in the right sidebar, with its toggle in the
@@ -21,22 +21,22 @@
  * outline still lists every turn, only the jump and the active-turn highlight
  * stay quiet.
  *
- * @module dsh-manuscript/client
+ * @module dsh-revise-chan/client
  */
 
 window.__ModuleLoader__.load({
-  id: 'dsh-manuscript',
+  id: 'dsh-revise-chan',
   factory(require) {
     const React = require('react')
     const { useCallback, useEffect, useMemo, useRef, useState } = React
     const h = React.createElement
 
     /** Dictionary namespace and sidebar tab identity owned by this plugin. */
-    const NS = 'manuscript'
-    const TAB_ID = 'dsh-manuscript-outline'
-    const TAB_KIND = 'manuscript-outline'
+    const NS = 'revise-chan'
+    const TAB_ID = 'dsh-revise-chan-outline'
+    const TAB_KIND = 'revise-chan-outline'
     /** Consumer identity for the session references this plugin retains. */
-    const REFERENCE_SOURCE = 'manuscript'
+    const REFERENCE_SOURCE = 'revise-chan'
     /** A trailing `·YYYY-MM-DD HH:mm` this plugin adds, so repeated edits do not stack. */
     const STAMP_SUFFIX = /\s*·\s*\d{4}-\d{2}-\d{2} \d{2}:\d{2}\s*$/u
     /** UTF-8 bytes `session-title` accepts for one title (`maxTitleBytes` in the base bundle). */
@@ -332,16 +332,16 @@ window.__ModuleLoader__.load({
     }
 
     const ACTION_CSS = `
-.dshManuscript-action {
+.dshReviseChan-action {
   display: inline-flex; align-items: center; justify-content: center;
   width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px;
   background: transparent; color: var(--dsw-alias-label-secondary, currentColor);
   cursor: pointer;
 }
-.dshManuscript-action:hover:not(:disabled) { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary, currentColor); }
-.dshManuscript-action:disabled { cursor: default; opacity: .45; }
-.dshManuscript-action:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: 1px; }
-.dshManuscript-byline {
+.dshReviseChan-action:hover:not(:disabled) { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary, currentColor); }
+.dshReviseChan-action:disabled { cursor: default; opacity: .45; }
+.dshReviseChan-action:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: 1px; }
+.dshReviseChan-byline {
   order: 5; align-self: center; white-space: nowrap;
   font-size: 12px; line-height: 20px;
   color: var(--dsw-alias-label-secondary, currentColor);
@@ -379,7 +379,7 @@ window.__ModuleLoader__.load({
       if (byline === '') return null
       return h(React.Fragment, null,
         h('style', { key: 'style' }, ACTION_CSS),
-        h('span', { key: 'byline', className: 'dshManuscript-byline', title: byline }, `· ${byline}`))
+        h('span', { key: 'byline', className: 'dshReviseChan-byline', title: byline }, `· ${byline}`))
     }
 
     // ---------------------------------------------------------------------
@@ -420,7 +420,7 @@ window.__ModuleLoader__.load({
         h('button', {
           key: 'edit',
           type: 'button',
-          className: 'dshManuscript-action',
+          className: 'dshReviseChan-action',
           'aria-label': label,
           title: label,
           disabled: running,
@@ -433,16 +433,16 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     const DIALOG_CSS = `
-.dshManuscript-layer {
+.dshReviseChan-layer {
   position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
   padding: 24px; pointer-events: auto;
 }
-.dshManuscript-mask {
+.dshReviseChan-mask {
   position: absolute; inset: 0;
   background: var(--dsw-alias-bg-mask-1, rgb(0 0 0 / 32%));
   backdrop-filter: var(--dsw-mask-blur, none);
 }
-.dshManuscript-dialog {
+.dshReviseChan-dialog {
   position: relative; z-index: 1; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 12px;
   width: min(720px, 100%); max-height: 100%; padding: 18px 20px 20px;
@@ -451,44 +451,44 @@ window.__ModuleLoader__.load({
   background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base, canvas));
   color: var(--dsw-alias-label-primary, canvastext);
 }
-.dshManuscript-head { display: flex; align-items: flex-start; gap: 12px; }
-.dshManuscript-title { flex: 1; margin: 0; font-size: 15px; font-weight: 600; }
-.dshManuscript-close {
+.dshReviseChan-head { display: flex; align-items: flex-start; gap: 12px; }
+.dshReviseChan-title { flex: 1; margin: 0; font-size: 15px; font-weight: 600; }
+.dshReviseChan-close {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px;
   background: transparent; color: var(--dsw-alias-label-secondary, currentColor); cursor: pointer;
 }
-.dshManuscript-close:hover { background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary, currentColor); }
-.dshManuscript-hint { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary, currentColor); }
-.dshManuscript-fieldLabel { font-size: 12px; color: var(--dsw-alias-label-secondary, currentColor); }
-.dshManuscript-text {
+.dshReviseChan-close:hover { background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary, currentColor); }
+.dshReviseChan-hint { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary, currentColor); }
+.dshReviseChan-fieldLabel { font-size: 12px; color: var(--dsw-alias-label-secondary, currentColor); }
+.dshReviseChan-text {
   box-sizing: border-box; width: 100%; min-height: 240px; max-height: 52vh; resize: vertical;
   padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2, transparent); border-radius: 10px;
   background: var(--dsw-alias-bg-base, canvas); color: var(--dsw-alias-label-primary, canvastext);
   font-family: inherit; font-size: 13px; line-height: 20px;
 }
-.dshManuscript-text:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: -1px; }
-.dshManuscript-foot { display: flex; align-items: center; gap: 10px; }
-.dshManuscript-status { flex: 1; font-size: 12px; color: var(--dsw-alias-label-secondary, currentColor); }
-.dshManuscript-status[data-tone="error"] { color: var(--dsw-alias-state-error-primary, currentColor); }
-.dshManuscript-button {
+.dshReviseChan-text:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: -1px; }
+.dshReviseChan-foot { display: flex; align-items: center; gap: 10px; }
+.dshReviseChan-status { flex: 1; font-size: 12px; color: var(--dsw-alias-label-secondary, currentColor); }
+.dshReviseChan-status[data-tone="error"] { color: var(--dsw-alias-state-error-primary, currentColor); }
+.dshReviseChan-button {
   box-sizing: border-box; height: 32px; padding: 0 14px; border-radius: 8px; cursor: pointer;
   border: 1px solid var(--dsw-alias-border-l2, transparent);
   background: transparent; color: var(--dsw-alias-label-primary, canvastext); font-size: 13px;
 }
-.dshManuscript-button:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, var(--dsw-alias-bg-layer-1)); }
+.dshReviseChan-button:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, var(--dsw-alias-bg-layer-1)); }
 /* The filled variant keeps a fill on hover: swapping the background for a
    surface token while the foreground stays a fill-contrast color is what made
    the label vanish under the pointer. */
-.dshManuscript-button[data-primary] {
+.dshReviseChan-button[data-primary] {
   border-color: transparent;
   background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-brand-primary, currentColor));
   color: var(--dsw-alias-label-primary-foreground, canvas);
 }
-.dshManuscript-button[data-primary]:hover:not(:disabled) {
+.dshReviseChan-button[data-primary]:hover:not(:disabled) {
   background: var(--dsw-alias-button-primary-hover, var(--dsw-alias-button-primary-fill, var(--dsw-alias-brand-primary, currentColor)));
 }
-.dshManuscript-button:disabled { cursor: default; opacity: .6; }
+.dshReviseChan-button:disabled { cursor: default; opacity: .6; }
 `
 
     /**
@@ -503,7 +503,7 @@ window.__ModuleLoader__.load({
       const request = useEditor(snapshot => snapshot)
       if (request === undefined || request === null) return null
       return h(EditorDialog, {
-        key: request.key === undefined ? 'manuscript-editor' : request.key,
+        key: request.key === undefined ? 'revise-chan-editor' : request.key,
         request,
         save: props.saveRevision,
         close: props.closeEditor,
@@ -549,54 +549,54 @@ window.__ModuleLoader__.load({
           setBusy(false)
         }
       }, [busy, save, request, text, close])
-      return h('div', { className: 'dshManuscript-layer' },
+      return h('div', { className: 'dshReviseChan-layer' },
         h('style', null, DIALOG_CSS),
-        h('div', { className: 'dshManuscript-mask', 'aria-hidden': true }),
+        h('div', { className: 'dshReviseChan-mask', 'aria-hidden': true }),
         h('div', {
-          className: 'dshManuscript-dialog',
+          className: 'dshReviseChan-dialog',
           role: 'dialog',
           'aria-modal': true,
           'aria-label': t('dialog.title'),
         },
-        h('div', { className: 'dshManuscript-head' },
-          h('h2', { className: 'dshManuscript-title' },
+        h('div', { className: 'dshReviseChan-head' },
+          h('h2', { className: 'dshReviseChan-title' },
             request.turn === undefined || request.turn === 0 || typeof request.turn !== 'number'
               ? t('dialog.title')
               : `${t('dialog.title')} · ${t('outline.turn', { turn: request.turn })}`),
           h('button', {
             type: 'button',
-            className: 'dshManuscript-close',
+            className: 'dshReviseChan-close',
             'aria-label': t('dialog.close'),
             title: t('dialog.close'),
             disabled: busy,
             onClick: () => { if (typeof close === 'function') close() },
           }, h(IconClose, { size: 14 }))),
-        h('p', { className: 'dshManuscript-hint' }, t('dialog.hint')),
-        h('span', { className: 'dshManuscript-fieldLabel' }, t('dialog.label')),
+        h('p', { className: 'dshReviseChan-hint' }, t('dialog.hint')),
+        h('span', { className: 'dshReviseChan-fieldLabel' }, t('dialog.label')),
         h('textarea', {
           ref: field,
-          className: 'dshManuscript-text',
+          className: 'dshReviseChan-text',
           value: text,
           spellCheck: false,
           disabled: busy,
           onChange: (event) => { setText(event.target.value) },
         }),
-        text === '' ? h('p', { className: 'dshManuscript-hint' }, t('dialog.empty')) : null,
-        h('div', { className: 'dshManuscript-foot' },
+        text === '' ? h('p', { className: 'dshReviseChan-hint' }, t('dialog.empty')) : null,
+        h('div', { className: 'dshReviseChan-foot' },
           h('span', {
-            className: 'dshManuscript-status',
+            className: 'dshReviseChan-status',
             'data-tone': problem === '' ? undefined : 'error',
             role: problem === '' ? undefined : 'alert',
           }, problem === '' ? (busy ? t('dialog.saving') : '') : problem),
           h('button', {
             type: 'button',
-            className: 'dshManuscript-button',
+            className: 'dshReviseChan-button',
             disabled: busy,
             onClick: () => { if (typeof close === 'function') close() },
           }, t('dialog.cancel')),
           h('button', {
             type: 'button',
-            className: 'dshManuscript-button',
+            className: 'dshReviseChan-button',
             'data-primary': true,
             disabled: busy,
             onClick: () => { void onSave() },
@@ -608,40 +608,40 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------
 
     const OUTLINE_CSS = `
-.dshManuscript-headerButton {
+.dshReviseChan-headerButton {
   display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px;
   border: 0; border-radius: 8px; background: transparent;
   color: var(--dsw-alias-label-secondary, currentColor); cursor: pointer; font-size: 13px;
 }
-.dshManuscript-headerButton:hover { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary, currentColor); }
-.dshManuscript-headerLabel { white-space: nowrap; }
-.dshManuscript-outline { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.dshManuscript-outlineHead {
+.dshReviseChan-headerButton:hover { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary, currentColor); }
+.dshReviseChan-headerLabel { white-space: nowrap; }
+.dshReviseChan-outline { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.dshReviseChan-outlineHead {
   padding: 10px 12px 8px; font-size: 12px; color: var(--dsw-alias-label-secondary, currentColor);
   border-bottom: 1px solid var(--dsw-alias-border-l1, transparent);
 }
-.dshManuscript-outlineList { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
-.dshManuscript-outlineRow {
+.dshReviseChan-outlineList { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
+.dshReviseChan-outlineRow {
   display: block; width: 100%; box-sizing: border-box; text-align: left; cursor: pointer;
   padding: 7px 9px; margin: 0 0 2px; border: 0; border-left: 2px solid transparent; border-radius: 8px;
   background: transparent; color: var(--dsw-alias-label-primary, canvastext); font: inherit;
 }
-.dshManuscript-outlineRow:hover { background: var(--dsw-alias-bg-layer-2); }
-.dshManuscript-outlineRow[data-active] {
+.dshReviseChan-outlineRow:hover { background: var(--dsw-alias-bg-layer-2); }
+.dshReviseChan-outlineRow[data-active] {
   background: var(--dsw-alias-bg-layer-2);
   border-left-color: var(--dsw-alias-brand-primary, currentColor);
 }
-.dshManuscript-outlineRow:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: -2px; }
-.dshManuscript-outlineTurn { display: flex; gap: 6px; align-items: baseline; font-size: 11px; color: var(--dsw-alias-label-secondary, currentColor); }
-.dshManuscript-outlinePrompt {
+.dshReviseChan-outlineRow:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: -2px; }
+.dshReviseChan-outlineTurn { display: flex; gap: 6px; align-items: baseline; font-size: 11px; color: var(--dsw-alias-label-secondary, currentColor); }
+.dshReviseChan-outlinePrompt {
   margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--dsw-alias-label-primary, canvastext);
   overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
 }
-.dshManuscript-outlineResponse {
+.dshReviseChan-outlineResponse {
   margin-top: 2px; font-size: 12px; line-height: 17px; color: var(--dsw-alias-label-secondary, currentColor);
   overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
 }
-.dshManuscript-outlineEmpty { padding: 16px 12px; font-size: 13px; color: var(--dsw-alias-label-secondary, currentColor); }
+.dshReviseChan-outlineEmpty { padding: 16px 12px; font-size: 13px; color: var(--dsw-alias-label-secondary, currentColor); }
 `
 
     /**
@@ -715,11 +715,11 @@ window.__ModuleLoader__.load({
         h('button', {
           key: 'toggle',
           type: 'button',
-          className: 'dshManuscript-headerButton',
+          className: 'dshReviseChan-headerButton',
           title: t('outline.open'),
           'aria-label': t('outline.open'),
           onClick,
-        }, h(IconOutline, { size: 15 }), h('span', { className: 'dshManuscript-headerLabel' }, t('outline.title'))))
+        }, h(IconOutline, { size: 15 }), h('span', { className: 'dshReviseChan-headerLabel' }, t('outline.title'))))
     }
 
     /**
@@ -772,32 +772,32 @@ window.__ModuleLoader__.load({
         if (typeof jump === 'function') void jump(entry)
       }, [jump])
       if (turns.length === 0) {
-        return h('div', { className: 'dshManuscript-outline' },
+        return h('div', { className: 'dshReviseChan-outline' },
           h('style', null, OUTLINE_CSS),
-          h('div', { className: 'dshManuscript-outlineEmpty' }, t('outline.empty')))
+          h('div', { className: 'dshReviseChan-outlineEmpty' }, t('outline.empty')))
       }
-      return h('div', { className: 'dshManuscript-outline' },
+      return h('div', { className: 'dshReviseChan-outline' },
         h('style', null, OUTLINE_CSS),
-        h('div', { className: 'dshManuscript-outlineHead' }, `${t('outline.title')} · ${String(turns.length)}`),
-        h('div', { className: 'dshManuscript-outlineList' },
+        h('div', { className: 'dshReviseChan-outlineHead' }, `${t('outline.title')} · ${String(turns.length)}`),
+        h('div', { className: 'dshReviseChan-outlineList' },
           turns.map(entry => h('button', {
             key: String(entry.turn),
             type: 'button',
-            className: 'dshManuscript-outlineRow',
+            className: 'dshReviseChan-outlineRow',
             'data-active': entry.turn === active ? true : undefined,
             title: entry.loaded ? t('outline.jump', { turn: entry.turn }) : t('outline.pending'),
             'aria-current': entry.turn === active ? 'true' : undefined,
             onClick: () => { onPick(entry) },
           },
-          h('span', { className: 'dshManuscript-outlineTurn' },
+          h('span', { className: 'dshReviseChan-outlineTurn' },
             h('span', null, t('outline.turn', { turn: entry.turn })),
             entry.turn === active ? h('span', null, t('outline.current')) : null),
           entry.prompt === ''
             ? null
-            : h('div', { className: 'dshManuscript-outlinePrompt' }, entry.prompt),
+            : h('div', { className: 'dshReviseChan-outlinePrompt' }, entry.prompt),
           entry.response === ''
             ? null
-            : h('div', { className: 'dshManuscript-outlineResponse' }, entry.response)))) )
+            : h('div', { className: 'dshReviseChan-outlineResponse' }, entry.response)))) )
     }
 
     // ---------------------------------------------------------------------
@@ -807,7 +807,7 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots', 'locale'],
       apply(ctx) {
-        ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-manuscript: dictionaries')
+        ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-revise-chan: dictionaries')
         const t = ctx.locale.bind(NS)
         const editor = createSnapshotSource(null)
 
@@ -883,7 +883,7 @@ window.__ModuleLoader__.load({
           if (sessions === undefined || uiWorkspace === undefined || rpc === undefined) {
             throw new Error(t('error.unavailable'))
           }
-          const planned = await callRemote(rpc, 'manuscript/plan', {
+          const planned = await callRemote(rpc, 'revise-chan/plan', {
             sessionId: request.sessionId,
             messageId: request.messageId,
           })
@@ -891,7 +891,7 @@ window.__ModuleLoader__.load({
             throw new Error(failureText(planned, t))
           }
           const childId = await sessions.fork({ sessionId: request.sessionId, atSeq: planned.value.forkSeq })
-          const revised = await callRemote(rpc, 'manuscript/revise', {
+          const revised = await callRemote(rpc, 'revise-chan/revise', {
             sourceSessionId: request.sessionId,
             childSessionId: childId,
             messageId: request.messageId,
@@ -913,13 +913,13 @@ window.__ModuleLoader__.load({
         // 1. The answer's byline and its edit action.
         ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register({
           name: 'conversation.chat.assistant-actions',
-          id: 'manuscript-byline',
+          id: 'revise-chan-byline',
           order: 20,
           locale: NS,
         }, BylineAction))
         ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register({
           name: 'conversation.chat.assistant-actions',
-          id: 'manuscript-edit',
+          id: 'revise-chan-edit',
           order: 30,
           locale: NS,
           inject: () => ({ openEditor: (request) => { editor.set(request) } }),
@@ -928,7 +928,7 @@ window.__ModuleLoader__.load({
         // 2. The editor dialog, in the frame-wide floating layer.
         ctx.slots.inject('shell.overlay', () => ctx.slots.register({
           name: 'shell.overlay',
-          id: 'manuscript-editor',
+          id: 'revise-chan-editor',
           order: 70,
           locale: NS,
           inject: () => ({
@@ -941,7 +941,7 @@ window.__ModuleLoader__.load({
         // 3. The outline toggle and its always-visible sidebar page.
         ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
           name: 'conversation.session.header.utilities',
-          id: 'manuscript-outline',
+          id: 'revise-chan-outline',
           order: 30,
           locale: NS,
           inject: () => ({ openOutline, outlineReady }),
@@ -953,7 +953,7 @@ window.__ModuleLoader__.load({
             kind: TAB_KIND,
             priority: 'builtin',
             title: () => t('outline.title'),
-          }), 'dsh-manuscript: outline page type')
+          }), 'dsh-revise-chan: outline page type')
         }
         ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
           name: 'sidebar.right.pane.tab',
