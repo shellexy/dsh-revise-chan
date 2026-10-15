@@ -2,6 +2,10 @@
 
 English | [中文](README.md)
 
+[![npm version](https://img.shields.io/npm/v/dsh-revise-chan?style=flat-square)](https://www.npmjs.com/package/dsh-revise-chan)
+[![license](https://img.shields.io/npm/l/dsh-revise-chan?style=flat-square)](https://github.com/shellexy/dsh-revise-chan/blob/main/LICENSE)
+[![dsh](https://img.shields.io/badge/dsh-0.2.x-blue?style=flat-square)](#compatibility)
+
 **Edit an AI answer's content in dsh, and keep the outline always visible.**
 
 Three things that make a [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) conversation behave like an editable manuscript: **byline**, **revision**, **outline**.

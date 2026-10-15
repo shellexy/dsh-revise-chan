@@ -2,6 +2,10 @@
 
 [English](README_EN.md) | 中文
 
+[![npm version](https://img.shields.io/npm/v/dsh-revise-chan?style=flat-square)](https://www.npmjs.com/package/dsh-revise-chan)
+[![license](https://img.shields.io/npm/l/dsh-revise-chan?style=flat-square)](https://github.com/shellexy/dsh-revise-chan/blob/main/LICENSE)
+[![dsh](https://img.shields.io/badge/dsh-0.2.x-blue?style=flat-square)](#兼容性)
+
 **让 dsh 可以修改 AI 回答内容 + 固定显示大纲。**
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）的对话补上三件「把回答当文稿来管」的事：**署名**、**修订**、**目录**。
