@@ -1,5 +1,7 @@
 # dsh-manuscript（稿本）
 
+[English](README_EN.md) | 中文
+
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）的对话补上三件「把回答当文稿来管」的事：**署名**、**修订**、**目录**。
 
 ![编辑 AI 回答的对话框，以及回答下方的时间行署名](docs/dialog.png)
@@ -91,6 +93,17 @@ Browser 半只 `require('react')`，不引用任何 Harness Client 包；样式�
 
 ## 已验证到什么程度
 
-- **真实网关**：在一次性 profile 里启动完整 Cordis 组合，用 `ctx.typertGateway.invoke({ namespace: 'manuscript', method: 'plan' | 'revise', args: { request } })` 打通，分支折叠结果为 `[提问, 修订后的回答]`，`turnBoundary.lastTurn` 保持原轮次号（后续轮次不撞号）。
-- **真实引擎**：用 `@deepseek-ai/dsh-session` 的 `buildForkSeed` + `Session.create` 复现「提问处 fork + 追加同轮修订回答」，`deriveMessages()` 与上面一致。
-- **Browser 半**：离线 harness 调用每个注册入口（署名文本、铅笔、对话框、大纲页、`saveRevision` 全流程），并在运行中的页面上确认六个槽位项全部 `active: true`。
+可复跑的部分都在 [`tools/`](tools/README.md)：三个离线验证（宿主半发现与行为、引擎折叠语义、Browser 半注册与保存事务）和一个端到端验证（启一个一次性 profile，走真实 Typert Gateway）。
+
+```bash
+bash tools/verify-all.sh          # 离线：不需要模型，不联网
+bash tools/verify-all.sh --e2e    # 再启一次性 profile 走真实网关
+```
+
+在 dsh `0.2.0-rc.2` 上的结论：
+
+- **真实网关**：`ctx.typertGateway.invoke({ namespace: 'manuscript', method: 'plan' | 'revise', args: { request } })` 可解析并执行；分支折叠为 `[提问, 修订后的回答]`，`turnBoundary.lastTurn` 保持原轮次号（后续轮次不撞号）。
+- **真实引擎**：`buildForkSeed` + `Session.create` 复现「提问处 fork + 追加同轮修订回答」，`deriveMessages()` 与上面一致，且继承前缀逐事件与来源相同。
+- **Browser 半**：每个注册入口都能用真实 slot props 渲染出预期元素树，`saveRevision` 发出的 RPC 载荷 / fork / 改名 / 归档 / 打开分支全部符合预期，并且六个槽位项在运行中的页面上都是 `active: true`。
+- **未验证**：真实浏览器里的布局、配色与悬停观感——那部分需要人眼。
+
