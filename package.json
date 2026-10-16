@@ -1,7 +1,7 @@
 {
   "name": "dsh-revise-chan",
-  "version": "0.2.2",
-  "description": "让 dsh 可以修改 AI 回答内容 + 固定显示大纲：回答署名、修订分支、常驻大纲侧栏",
+  "version": "0.2.3",
+  "description": "让 dsh 可以修改 AI 回答内容 + 显示大纲悬浮栏：回答署名、修订分支、悬浮大纲",
   "type": "module",
   "license": "MIT",
   "author": "Shellexy",

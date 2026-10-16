@@ -6,15 +6,17 @@ English | [中文](README.md)
 [![license](https://img.shields.io/npm/l/dsh-revise-chan?style=flat-square)](https://github.com/shellexy/dsh-revise-chan/blob/main/LICENSE)
 [![dsh](https://img.shields.io/badge/dsh-0.2.x-blue?style=flat-square)](#compatibility)
 
-**Edit an AI answer's content in dsh, and keep the outline always visible.**
+**Edit an AI answer's content in dsh, and show the outline in a floating panel.**
 
 Three things that make a [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) conversation behave like an editable manuscript: **byline**, **revision**, **outline**.
 
 ![The edit dialog, and the byline on the answer's clock row](docs/dialog.png)
 
+![The floating outline: a button at the conversation's top-right, and the turn list it opens](docs/outline.png)
+
 - **Byline** — every answer's clock row gains `model | provider`, read from that turn's billed route (`turn-tail.tokenUsage.routes`), falling back to the message's own `providerMetadata` when the Chat fold does not carry it.
 - **Revision** — a pencil sits beside the copy button. It opens an in-app dialog over the answer body; saving branches from that answer's **human prompt**, so the branch's answer *is* your rewritten text and the branch **keeps the original title** (you stay in "the same" conversation). The version it supersedes gains a `·<edit time>` suffix and is archived.
-- **Outline** — a floating button at the conversation's top-right opens a list pinned beside the conversation column: one row per started turn (prompt + response preview), the current turn highlighted, and any row jumps to its turn (turns outside the loaded window page history in through the `turnOutline` projection's `seq` first). It is an overlay rather than a right-sidebar page, so it costs no column width, needs no sidebar, and leaves the Host's own hover rail untouched.
+- **Outline** — a floating button at the conversation's top-right opens a list pinned beside the conversation column: one row per started turn (one line of question plus two of answer preview, with preview-less turns falling back to their turn number), the current turn highlighted, and any row jumps to its turn (turns outside the loaded window page history in through the `turnOutline` projection's `seq` first). The panel fills the conversation band down to the composer, and a press anywhere outside it (or Escape / ✕ / the toggle) collapses it. It is an overlay rather than a right-sidebar page, so it costs no column width, needs no sidebar, and leaves the Host's own hover rail untouched.
 
 ## Install
 
