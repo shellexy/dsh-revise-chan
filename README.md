@@ -10,8 +10,6 @@
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）的对话补上三件「把回答当文稿来管」的事：**署名**、**修订**、**目录**。
 
-![编辑 AI 回答的对话框，以及回答下方的时间行署名](docs/dialog.png)
-
 ![悬浮大纲：按钮钉在对话区右上角，点开是贴着右侧的轮次列表，当前轮高亮](docs/outline.png)
 
 - **署名**：每条回答下方的时间行末尾补上 `模型 | 提供方`，取自这一轮回答的 token 计量归属（`turn-tail.tokenUsage.routes`，即真正被计费的那次路由；Chat 折叠没有这条时回退到消息自带的 `providerMetadata`）。
@@ -48,7 +46,7 @@ dsh plugin --profile web add ./dsh-revise-chan
 
 ## 功能 2 到底做了什么
 
-dsh 的会话日志是只追加、深度冻结的，而且 `assistant/message` **不能**做 surface replacement（它要求引用被遮蔽的节点，又禁止携带 `sourceEventSeqs`），所以「改写历史里那条回答」在 0.2.x 上无法字面实现。稿本改用一条完全申报的路径：
+dsh 的会话日志是只追加、深度冻结的，而且 `assistant/message` **不能**做 surface replacement（它要求引用被遮蔽的节点，又禁止携带 `sourceEventSeqs`），所以「改写历史里那条回答」在 0.2.x 上无法字面实现。dsh-revise-chan 改用一条完全申报的路径：
 
 1. `revise-chan/plan` 在来源会话的日志里定位这条回答所属轮次的**人类提问**事件序号（只有 `source.kind === 'user'` 的 `user/message` 才算）。
 2. Browser 半在那一格 `sessions.fork({ atSeq })`——子会话原样继承到提问为止（连标题一起）：提问还在，原回答不在，子会话自己的 `turn/end` 由 fork 合成闭包补上。

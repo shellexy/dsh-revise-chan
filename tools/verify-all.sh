@@ -8,7 +8,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 status=0
 
-for tool in verify-host verify-engine verify-client; do
+for tool in verify-docs verify-host verify-engine verify-client; do
   echo "▶ $tool"
   node "$here/$tool.mjs" || status=1
   echo

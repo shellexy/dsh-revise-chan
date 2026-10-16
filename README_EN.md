@@ -10,8 +10,6 @@ English | [中文](README.md)
 
 Three things that make a [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) conversation behave like an editable manuscript: **byline**, **revision**, **outline**.
 
-![The edit dialog, and the byline on the answer's clock row](docs/dialog.png)
-
 ![The floating outline: a button at the conversation's top-right, and the turn list it opens](docs/outline.png)
 
 - **Byline** — every answer's clock row gains `model | provider`, read from that turn's billed route (`turn-tail.tokenUsage.routes`), falling back to the message's own `providerMetadata` when the Chat fold does not carry it.
@@ -48,7 +46,7 @@ Restart the running `dsh web` afterwards: the Host half has to load the `revise-
 
 ## What "revision" actually does
 
-A dsh session log is append-only and deep-frozen, and `assistant/message` **cannot** be surface-replaced (the operation must cite the node it shadows, while that event type forbids `sourceEventSeqs`). Rewriting the answer in place is therefore impossible on 0.2.x. 稿本 takes a fully declared route instead:
+A dsh session log is append-only and deep-frozen, and `assistant/message` **cannot** be surface-replaced (the operation must cite the node it shadows, while that event type forbids `sourceEventSeqs`). Rewriting the answer in place is therefore impossible on 0.2.x. dsh-revise-chan takes a fully declared route instead:
 
 1. `revise-chan/plan` finds the **human prompt** of the turn whose answer was edited (only a `user/message` with `source.kind === 'user'` counts — injected context does not).
 2. The Browser half forks there with `sessions.fork({ atSeq })`: the child inherits everything through the prompt, title included — the question is still there, the original answer is not, and the fork's own synthetic plain `turn/end` closes the cut turn.

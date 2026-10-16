@@ -1,11 +1,11 @@
 # tools — 可复跑的验证脚本 / Reproducible verifications
 
-这些脚本把「稿本」依赖的三层契约各自钉住：宿主半的 Remote 发现与行为、宿主会话引擎的折叠语义、Browser 半的注册与事务。升级 dsh 之后重跑一遍，就能知道上面的机制是否还成立。
+这些脚本把「修订酱」依赖的三层契约各自钉住：宿主半的 Remote 发现与行为、宿主会话引擎的折叠语义、Browser 半的注册与事务。升级 dsh 之后重跑一遍，就能知道上面的机制是否还成立。
 
-These scripts pin the three contracts 稿本 relies on — Host Remote discovery and behaviour, the session engine's fold semantics, and the Browser half's registrations and transaction — so a dsh upgrade can be re-verified in one command.
+These scripts pin the contracts dsh-revise-chan relies on — Host Remote discovery and behaviour, the session engine's fold semantics, and the Browser half's registrations and transaction — so a dsh upgrade can be re-verified in one command.
 
 ```bash
-bash tools/verify-all.sh          # 三个离线验证（不需要模型、不联网）
+bash tools/verify-all.sh          # 四个离线验证（不需要模型、不联网）
 bash tools/verify-all.sh --e2e    # 再启一个一次性 profile，走真实 Typert Gateway
 ```
 
@@ -13,6 +13,7 @@ bash tools/verify-all.sh --e2e    # 再启一个一次性 profile，走真实 Ty
 
 | 脚本 | 验证什么 | 需要什么 |
 |---|---|---|
+| `verify-docs.mjs` | 文档：中英 README 里每个相对链接/图片都真实存在、徽章与其链接目标都是绝对地址、两版互相链接、`docs/` 下没有无人引用的孤儿资产、`files` 白名单包含两个 README（npm 用发布物里的 README 渲染，相对图片会被改写到 GitHub，删图/改名留下的悬空引用就靠这条兜住） | 只需 Node |
 | `verify-host.mjs` | Typert Gateway 的 SRC 发现规则能否从活着的服务上 claim `revise-chan/plan` / `revise-chan/revise`（binding 形状、Remote marker、参数名反射），以及 `plan` / `revise` 在事件形状真实的会话上的行为与全部业务错误码 | 能解析 dsh 包（见下） |
 | `verify-engine.mjs` | 用真实的 `@deepseek-ai/dsh-session`：`buildForkSeed` 切在提问处 → 分支折叠为 `[提问1, 回答1, 提问2]`；追加修订轮后折叠为 `[提问1, 回答1, 提问2, 修订稿]`；继承前缀逐事件与来源一致 | 能解析 dsh 包 |
 | `verify-client.mjs` | Browser 半：`apply` 只注册五个槽位项；署名/铅笔/对话框/悬浮大纲在带状态与副作用的最小 React 运行时（`lib/mini-react.mjs`）里真实交互——按钮出现、面板展开列轮次、高亮当前轮、点未载入轮次先 `loadThrough` 再滚动、关闭、会话卸载后撤回；`saveRevision` 发出的 RPC 载荷、fork 参数、新标题规则、归档顺序、标题字节预算、业务失败的本地化文案 | 只需 Node（`lib/mini-react.mjs` 提供 React 运行时） |
