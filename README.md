@@ -13,8 +13,8 @@
 ![编辑 AI 回答的对话框，以及回答下方的时间行署名](docs/dialog.png)
 
 - **署名**：每条回答下方的时间行末尾补上 `模型 | 提供方`，取自这一轮回答的 token 计量归属（`turn-tail.tokenUsage.routes`，即真正被计费的那次路由；Chat 折叠没有这条时回退到消息自带的 `providerMetadata`）。
-- **修订**：复制按钮右边多一支铅笔。点开一个应用内对话框改回答正文，保存后从这条回答的**提问处**新建分支——新分支里这条回答就是你改写的正文；分支名加 `·<保存时间>`，原会话标题加 `·<原回答时间>` 并归档。
-- **目录**：对话标题栏多一个「大纲」按钮，打开右侧栏里的常驻大纲页：列出每个已开始的轮次（提问 + 回答预览），高亮当前所在轮次，点任意一条跳到该轮（未载入的轮次会先按 `turnOutline` 的 `seq` 把历史翻页到那一轮）。
+- **修订**：复制按钮右边多一支铅笔。点开一个应用内对话框改回答正文，保存后从这条回答的**提问处**新建分支——新分支里这条回答就是你改写的正文，而且**沿用原标题**（你始终待在"同一条对话"里）；被取代的旧会话加上 `·<修改时间>` 后缀并归档。
+- **目录**：对话区右上角有一个悬浮的「大纲」按钮，点开是贴着对话列右侧的悬浮列表：每个已开始的轮次一行（提问 + 回答预览），高亮当前所在轮次，点任意一条跳到该轮（未载入的轮次会先按 `turnOutline` 的 `seq` 把历史翻页到那一轮）。它是悬浮窗而不是右侧栏页签——不占用列宽、不必打开侧栏，也不会遮挡宿主的悬停刻度条（那个我们一行都没碰）。
 
 ## 安装
 
@@ -49,7 +49,7 @@ dsh plugin --profile web add ./dsh-revise-chan
 dsh 的会话日志是只追加、深度冻结的，而且 `assistant/message` **不能**做 surface replacement（它要求引用被遮蔽的节点，又禁止携带 `sourceEventSeqs`），所以「改写历史里那条回答」在 0.2.x 上无法字面实现。稿本改用一条完全申报的路径：
 
 1. `revise-chan/plan` 在来源会话的日志里定位这条回答所属轮次的**人类提问**事件序号（只有 `source.kind === 'user'` 的 `user/message` 才算）。
-2. Browser 半在那一格 `sessions.fork({ atSeq })`——子会话原样继承到提问为止：提问还在，原回答不在，子会话自己的 `turn/end` 由 fork 合成闭包补上。
+2. Browser 半在那一格 `sessions.fork({ atSeq })`——子会话原样继承到提问为止（连标题一起）：提问还在，原回答不在，子会话自己的 `turn/end` 由 fork 合成闭包补上。
 3. `revise-chan/revise` 往这个还活着的子会话里**追加**一个完整轮次：`turn/start`（沿用该轮轮次号）→ `step/start` → `assistant/message`（正文＝你的修订稿，沿用原消息 id、provider、model，保留思考块与图片，丢弃工具调用）→ `step/end` → `turn/end`。
 
 一次真实修订在日志里长这样：
@@ -75,15 +75,16 @@ revise 追加
 - 修订会**丢掉原轮次的工具调用链**：那些工具确实属于被丢弃的分支，新分支不能替它们认领结果。思考块与图片保留。
 - 压缩摘要已经吞掉该轮时无法修订：宿主返回 `message-not-found`，对话框照实说明。
 - 会话标题有 UTF-8 80 字节上限（`session-title` 的 `maxTitleBytes`），宿主是**截断**而不是拒绝。所以插件先把原标题按字节裁到 62 字节再补 `·YYYY-MM-DD HH:mm`，避免宿主的截断吃掉时间戳后缀；同一会话反复修订时，旧时间戳后缀会先被剥掉再重新加。
-- 大纲的「跳到某轮」和「当前轮次高亮」依赖宿主为自身锚点发布的 `[data-conversation-scroll]` / `[data-chat-turn]` 属性；日后改名只会让跳转和高亮失效，大纲列表本身不受影响。
-- 右侧栏大纲页是插件能提供的最接近「一直显示」的形态：宿主没有开放跨插件的对话区滚动，所以跳转走的是上面的 DOM 锚点。
+- 大纲的「跳到某轮」「当前轮次高亮」以及悬浮按钮的落位，都依赖宿主为自身锚点发布的 `[data-conversation-scroll]` / `[data-chat-turn]` 属性；日后改名只会让这三件事失效（按钮不出现、列表不跟随），大纲数据本身不受影响。
+- 悬浮窗口的位置是量出来的：贴着对话滚动区右上角（`ResizeObserver` + resize/scroll 跟随）。对话视图没挂载（比如切到别的面板或轨迹视图）时它整体消失——大纲本来只服务于对话流。
+- 悬浮窗**不**点外部关闭（只在 ✕ / 再点按钮 / Esc 时关闭），这样它可以一直挂在旁边读；每个会话记得自己上次是否打开（仅本次页面生命周期内）。
 
 ## 实现说明
 
 | 文件 | 职责 |
 |---|---|
 | `index.js` | Host 半：`revise-chan` Remote 命名空间（`plan` / `revise`）。Remote marker 直接按 `@deepseek-ai/dsh-typert-protocol/remote-methods` 的描述符安装，因此纯 JavaScript 无需装饰器或 typert 生成物。 |
-| `client.js` | Browser 半：署名与编辑按钮（`conversation.chat.assistant-actions`）、编辑对话框（`shell.overlay`）、大纲按钮（`conversation.session.header.utilities`）与大纲页（`sidebar.right.pane.tab`）。 |
+| `client.js` | Browser 半：署名与编辑按钮（`conversation.chat.assistant-actions`）、编辑对话框（`shell.overlay`）、大纲数据桥（`conversation.input.dock`，只发布不渲染）与悬浮大纲（`shell.overlay`）。 |
 | `cordis.patch.yml` | 把 `dsh-revise-chan` 这一行插进 profile 的 Loader 配置。 |
 
 Browser 半只 `require('react')`，不引用任何 Harness Client 包；样式全部走 `--dsw-*` 主题 token，界面文案走 `locale.register` 的中英文词典。
@@ -110,6 +111,6 @@ bash tools/verify-all.sh --e2e    # 再启一次性 profile 走真实网关
 
 - **真实网关**：`ctx.typertGateway.invoke({ namespace: 'revise-chan', method: 'plan' | 'revise', args: { request } })` 可解析并执行；分支折叠为 `[提问, 修订后的回答]`，`turnBoundary.lastTurn` 保持原轮次号（后续轮次不撞号）。
 - **真实引擎**：`buildForkSeed` + `Session.create` 复现「提问处 fork + 追加同轮修订回答」，`deriveMessages()` 与上面一致，且继承前缀逐事件与来源相同。
-- **Browser 半**：每个注册入口都能用真实 slot props 渲染出预期元素树，`saveRevision` 发出的 RPC 载荷 / fork / 改名 / 归档 / 打开分支全部符合预期，并且六个槽位项在运行中的页面上都是 `active: true`。
+- **Browser 半**：`tools/lib/mini-react.mjs` 提供带状态与副作用的最小 React 运行时，因此验证覆盖到交互本身——署名文本、铅笔禁用态与交接、对话框草稿、大纲按钮出现、面板展开/列轮次/高亮当前轮/点未载入轮次先翻页再滚动/关闭/会话卸载后撤回；`saveRevision` 的 RPC 载荷、fork 边界、新标题规则（只给被取代的会话加时间戳）与归档顺序也全部断言。
 - **未验证**：真实浏览器里的布局、配色与悬停观感——那部分需要人眼。
 

@@ -79,18 +79,23 @@ export async function importPluginHost() {
  * `window.__ModuleLoader__` and needs a `react` stub in place first.
  * @returns the plugin object the factory returned.
  */
-export async function importPluginClient() {
+/**
+ * Import this plugin's Browser half, which registers itself into
+ * `window.__ModuleLoader__` and needs a `react` implementation in place first.
+ * @param React - the `react` implementation its components will use.
+ * @returns the plugin object the factory returned.
+ */
+export async function importPluginClient(React) {
+  const require = name => {
+    if (name === 'react') return React
+    throw new Error(`unexpected require(${JSON.stringify(name)})`)
+  }
   let api
-  globalThis.__reviseChanReactStub = reactStub
+  // Extend the page's `window` rather than replace it: a caller that stubbed
+  // DOM globals on it (the verifiers do) keeps them.
   globalThis.window = {
-    __ModuleLoader__: {
-      load: ({ factory }) => {
-        api = factory(name => {
-          if (name === 'react') return reactStub
-          throw new Error(`unexpected require(${JSON.stringify(name)})`)
-        })
-      },
-    },
+    ...(globalThis.window ?? {}),
+    __ModuleLoader__: { load: ({ factory }) => { api = factory(require) } },
   }
   await import(new URL('../../client.js', import.meta.url).href)
   if (api === undefined) throw new Error('client.js did not call window.__ModuleLoader__.load')

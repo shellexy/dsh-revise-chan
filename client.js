@@ -31,10 +31,8 @@ window.__ModuleLoader__.load({
     const { useCallback, useEffect, useMemo, useRef, useState } = React
     const h = React.createElement
 
-    /** Dictionary namespace and sidebar tab identity owned by this plugin. */
+    /** Dictionary namespace owned by this plugin. */
     const NS = 'revise-chan'
-    const TAB_ID = 'dsh-revise-chan-outline'
-    const TAB_KIND = 'revise-chan-outline'
     /** Consumer identity for the session references this plugin retains. */
     const REFERENCE_SOURCE = 'revise-chan'
     /** A trailing `·YYYY-MM-DD HH:mm` this plugin adds, so repeated edits do not stack. */
@@ -69,14 +67,15 @@ window.__ModuleLoader__.load({
       'action.busy': '正在生成回答，稍后再编辑',
       'byline.label': '{model} | {provider}',
       'outline.title': '大纲',
-      'outline.open': '打开大纲侧栏',
+      'outline.open': '大纲：悬浮显示在每个轮次的列表',
       'outline.empty': '这个会话还没有已开始的轮次。',
       'outline.turn': '第 {turn} 轮',
       'outline.jump': '跳到第 {turn} 轮',
       'outline.pending': '尚未载入，点击后载入该轮',
       'outline.current': '当前所在轮次',
+      'outline.close': '关闭大纲',
       'dialog.title': '编辑 AI 回答',
-      'dialog.hint': '保存后会从这条回答的提问处新建分支：新分支里这条回答是你改写的正文，原会话加上时间后缀并归档。',
+      'dialog.hint': '保存后会从这条回答的提问处新建分支：新分支沿用原标题，里面这条回答是你改写的正文；旧会话加上修改时间后缀并归档。',
       'dialog.label': '回答正文',
       'dialog.save': '保存并新建分支',
       'dialog.saving': '正在新建分支…',
@@ -96,14 +95,15 @@ window.__ModuleLoader__.load({
       'action.busy': 'Answer is still generating; edit once it settles',
       'byline.label': '{model} | {provider}',
       'outline.title': 'Outline',
-      'outline.open': 'Open the outline sidebar',
+      'outline.open': 'Outline: the turn list, floating over the conversation',
       'outline.empty': 'This session has no started turn yet.',
       'outline.turn': 'Turn {turn}',
       'outline.jump': 'Jump to turn {turn}',
       'outline.pending': 'Not loaded yet; picking it loads the turn',
       'outline.current': 'Current turn',
+      'outline.close': 'Close the outline',
       'dialog.title': 'Edit the AI answer',
-      'dialog.hint': 'Saving branches from this answer\'s prompt: the branch carries your rewritten answer, and the source session is stamped and archived.',
+      'dialog.hint': 'Saving branches from this answer\'s prompt: the branch keeps the original title and carries your rewritten answer; the previous session is stamped with the edit time and archived.',
       'dialog.label': 'Answer text',
       'dialog.save': 'Save and branch',
       'dialog.saving': 'Creating the branch…',
@@ -604,31 +604,51 @@ window.__ModuleLoader__.load({
     }
 
     // ---------------------------------------------------------------------
-    // Outline sidebar: toggle in the header, page in the right sidebar
+    // Outline: a floating panel over the conversation
     // ---------------------------------------------------------------------
 
     const OUTLINE_CSS = `
-.dshReviseChan-headerButton {
-  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px;
-  border: 0; border-radius: 8px; background: transparent;
-  color: var(--dsw-alias-label-secondary, currentColor); cursor: pointer; font-size: 13px;
+.dshReviseChan-floatButton {
+  position: fixed; z-index: 20; display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0; border-radius: 999px; cursor: pointer; pointer-events: auto;
+  border: 1px solid var(--dsw-alias-border-l1, transparent);
+  background: var(--dsw-alias-bg-layer-1, canvas);
+  color: var(--dsw-alias-label-secondary, currentColor);
+  box-shadow: var(--dsw-elevation-panel, none);
 }
-.dshReviseChan-headerButton:hover { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary, currentColor); }
-.dshReviseChan-headerLabel { white-space: nowrap; }
-.dshReviseChan-outline { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.dshReviseChan-outlineHead {
-  padding: 10px 12px 8px; font-size: 12px; color: var(--dsw-alias-label-secondary, currentColor);
+.dshReviseChan-floatButton:hover,
+.dshReviseChan-floatButton[data-open] { background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary, currentColor); }
+.dshReviseChan-floatButton:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: 2px; }
+.dshReviseChan-floatPanel {
+  position: fixed; z-index: 20; display: flex; flex-direction: column;
+  width: 300px; max-height: min(70vh, 560px); overflow: hidden; pointer-events: auto;
+  border: 1px solid var(--dsw-alias-border-l2, transparent); border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base, canvas));
+  color: var(--dsw-alias-label-primary, canvastext);
+  box-shadow: var(--dsw-elevation-panel, none);
+}
+.dshReviseChan-panelHead {
+  display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px;
   border-bottom: 1px solid var(--dsw-alias-border-l1, transparent);
+  font-size: 12px; color: var(--dsw-alias-label-secondary, currentColor);
 }
-.dshReviseChan-outlineList { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
+.dshReviseChan-panelTitle { flex: 1; }
+.dshReviseChan-panelClose {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: var(--dsw-alias-label-secondary, currentColor); cursor: pointer;
+}
+.dshReviseChan-panelClose:hover { background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary, currentColor); }
+.dshReviseChan-panelList { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
+.dshReviseChan-outlineEmpty { padding: 16px 12px; font-size: 13px; color: var(--dsw-alias-label-secondary, currentColor); }
 .dshReviseChan-outlineRow {
   display: block; width: 100%; box-sizing: border-box; text-align: left; cursor: pointer;
   padding: 7px 9px; margin: 0 0 2px; border: 0; border-left: 2px solid transparent; border-radius: 8px;
   background: transparent; color: var(--dsw-alias-label-primary, canvastext); font: inherit;
 }
-.dshReviseChan-outlineRow:hover { background: var(--dsw-alias-bg-layer-2); }
+.dshReviseChan-outlineRow:hover { background: var(--dsw-alias-bg-layer-1); }
 .dshReviseChan-outlineRow[data-active] {
-  background: var(--dsw-alias-bg-layer-2);
+  background: var(--dsw-alias-bg-layer-1);
   border-left-color: var(--dsw-alias-brand-primary, currentColor);
 }
 .dshReviseChan-outlineRow:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: -2px; }
@@ -641,7 +661,6 @@ window.__ModuleLoader__.load({
   margin-top: 2px; font-size: 12px; line-height: 17px; color: var(--dsw-alias-label-secondary, currentColor);
   overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
 }
-.dshReviseChan-outlineEmpty { padding: 16px 12px; font-size: 13px; color: var(--dsw-alias-label-secondary, currentColor); }
 `
 
     /**
@@ -686,53 +705,23 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The outline tab's chip title.
-     * @param props - the tab's locale seat.
-     * @returns the title text.
+     * Session-scoped bridge for the floating outline.
+     *
+     * The panel itself renders in the frame-wide `shell.overlay`, which is
+     * root-scoped and therefore cannot read this Session's projection or its
+     * navigation items. This entry renders nothing; it owns the turn list and
+     * the jump closure (the only piece that knows which Session to page in) and
+     * publishes them, withdrawing them when the Conversation unmounts.
+     *
+     * @param props - session seats plus the injected publish and jump.
+     * @returns nothing.
      */
-    function OutlineTitle(props) {
-      const t = props.t
-      return typeof t === 'function' ? t('outline.title') : 'Outline'
-    }
-
-    /**
-     * The conversation-header toggle for the outline page.
-     * @param props - injected opener and the locale seat.
-     * @returns the toggle button.
-     */
-    function OutlineButton(props) {
-      const open = props.openOutline
-      const ready = typeof props.outlineReady === 'function' ? props.outlineReady() : true
-      const t = props.t
-      const onClick = useCallback(() => {
-        if (typeof open === 'function') open()
-      }, [open])
-      // No registered page type means no pane to open: leave the header clean
-      // rather than offering a control that cannot do anything.
-      if (!ready) return null
-      return h(React.Fragment, null,
-        h('style', { key: 'style' }, OUTLINE_CSS),
-        h('button', {
-          key: 'toggle',
-          type: 'button',
-          className: 'dshReviseChan-headerButton',
-          title: t('outline.open'),
-          'aria-label': t('outline.open'),
-          onClick,
-        }, h(IconOutline, { size: 15 }), h('span', { className: 'dshReviseChan-headerLabel' }, t('outline.title'))))
-    }
-
-    /**
-     * One always-visible outline page: every started turn with its previews.
-     * @param props - session seats, the injected jump action, and the locale seat.
-     * @returns the outline page.
-     */
-    function OutlineBody(props) {
+    function OutlineBridge(props) {
       const sessionId = props.sessionId
       const useProjection = typeof props.useProjection === 'function' ? props.useProjection : () => undefined
       const useChat = chatSeat(props.useChat)
-      const jump = props.jump
-      const t = props.t
+      const publish = props.publish
+      const jumpToTurn = props.jumpToTurn
       const outline = useProjection('turnOutline')
       const loaded = useChat(snapshot => (snapshot.navigation === undefined ? [] : snapshot.navigation.items()))
       const turns = useMemo(() => outlineTurns(outline, loaded), [outline, loaded])
@@ -768,36 +757,141 @@ window.__ModuleLoader__.load({
           if (frame !== null) cancelAnimationFrame(frame)
         }
       }, [sessionId])
-      const onPick = useCallback((entry) => {
-        if (typeof jump === 'function') void jump(entry)
-      }, [jump])
-      if (turns.length === 0) {
-        return h('div', { className: 'dshReviseChan-outline' },
-          h('style', null, OUTLINE_CSS),
-          h('div', { className: 'dshReviseChan-outlineEmpty' }, t('outline.empty')))
+      useEffect(() => {
+        publish({ sessionId, turns, active, jump: entry => { void jumpToTurn({ ...entry, sessionId }) } })
+      }, [publish, sessionId, turns, active, jumpToTurn])
+      useEffect(() => () => { publish(null) }, [publish])
+      return null
+    }
+
+    /**
+     * Frame-wide floating outline: a toggle pinned to the Conversation column's
+     * top-right corner and the turn list it shows.
+     * @param props - injected outline source, its remembered open flags, translator.
+     * @returns the toggle, and the panel while it is open.
+     */
+    function OutlineFloat(props) {
+      const useOutline = typeof props.useOutline === 'function' ? props.useOutline : select => select(null)
+      const wasOpen = props.wasOpen
+      const rememberOpen = props.rememberOpen
+      const t = props.t
+      const current = useOutline(snapshot => snapshot)
+      const sessionId = current === null || current === undefined ? null : current.sessionId
+      const [open, setOpen] = useState(false)
+      const [anchor, setAnchor] = useState(null)
+
+      // Ride the Conversation column: its scrollport is the anchor the Host
+      // publishes, so the toggle follows panel and window size changes.
+      useEffect(() => {
+        if (sessionId === null) return undefined
+        let frame = null
+        const measure = () => {
+          frame = null
+          const container = document.querySelector('[data-conversation-scroll]')
+          if (container === null) {
+            setAnchor(null)
+            return
+          }
+          const rect = container.getBoundingClientRect()
+          setAnchor({
+            top: Math.round(rect.top + 8),
+            right: Math.round(Math.max(8, window.innerWidth - rect.right + 12)),
+          })
+        }
+        const schedule = () => {
+          if (frame === null) frame = requestAnimationFrame(measure)
+        }
+        measure()
+        const container = document.querySelector('[data-conversation-scroll]')
+        const observer = typeof ResizeObserver === 'function' && container !== null ? new ResizeObserver(schedule) : null
+        if (observer !== null && container !== null) observer.observe(container)
+        window.addEventListener('resize', schedule)
+        document.addEventListener('scroll', schedule, true)
+        return () => {
+          window.removeEventListener('resize', schedule)
+          document.removeEventListener('scroll', schedule, true)
+          if (observer !== null) observer.disconnect()
+          if (frame !== null) cancelAnimationFrame(frame)
+        }
+      }, [sessionId])
+
+      // Each Session remembers whether its outline was open.
+      useEffect(() => {
+        setOpen(sessionId === null ? false : wasOpen(sessionId) === true)
+      }, [sessionId, wasOpen])
+
+      const flip = useCallback(() => {
+        setOpen((previous) => {
+          const next = !previous
+          if (sessionId !== null) rememberOpen(sessionId, next)
+          return next
+        })
+      }, [sessionId, rememberOpen])
+      const dismiss = useCallback(() => {
+        setOpen(false)
+        if (sessionId !== null) rememberOpen(sessionId, false)
+      }, [sessionId, rememberOpen])
+      useEffect(() => {
+        if (!open) return undefined
+        const onKey = (event) => { if (event.key === 'Escape') dismiss() }
+        window.addEventListener('keydown', onKey, true)
+        return () => { window.removeEventListener('keydown', onKey, true) }
+      }, [open, dismiss])
+
+      if (current === null || current === undefined || anchor === null) return null
+      const toggle = h('button', {
+        key: 'toggle',
+        type: 'button',
+        className: 'dshReviseChan-floatButton',
+        style: { top: `${String(anchor.top)}px`, right: `${String(anchor.right)}px` },
+        title: t('outline.open'),
+        'aria-label': t('outline.open'),
+        'aria-expanded': open,
+        'data-open': open ? true : undefined,
+        onClick: flip,
+      }, h(IconOutline, { size: 15 }))
+      if (!open) {
+        return h(React.Fragment, null, h('style', { key: 'style' }, OUTLINE_CSS), toggle)
       }
-      return h('div', { className: 'dshReviseChan-outline' },
-        h('style', null, OUTLINE_CSS),
-        h('div', { className: 'dshReviseChan-outlineHead' }, `${t('outline.title')} · ${String(turns.length)}`),
-        h('div', { className: 'dshReviseChan-outlineList' },
+      const turns = current.turns
+      const panel = h('div', {
+        key: 'panel',
+        className: 'dshReviseChan-floatPanel',
+        style: { top: `${String(anchor.top + 36)}px`, right: `${String(anchor.right)}px` },
+        role: 'navigation',
+        'aria-label': t('outline.title'),
+      },
+      h('div', { className: 'dshReviseChan-panelHead' },
+        h('span', { className: 'dshReviseChan-panelTitle' }, `${t('outline.title')} · ${String(turns.length)}`),
+        h('button', {
+          type: 'button',
+          className: 'dshReviseChan-panelClose',
+          title: t('outline.close'),
+          'aria-label': t('outline.close'),
+          onClick: dismiss,
+        }, h(IconClose, { size: 13 }))),
+      turns.length === 0
+        ? h('div', { className: 'dshReviseChan-outlineEmpty' }, t('outline.empty'))
+        : h('div', { className: 'dshReviseChan-panelList' },
           turns.map(entry => h('button', {
             key: String(entry.turn),
             type: 'button',
             className: 'dshReviseChan-outlineRow',
-            'data-active': entry.turn === active ? true : undefined,
+            'data-active': entry.turn === current.active ? true : undefined,
             title: entry.loaded ? t('outline.jump', { turn: entry.turn }) : t('outline.pending'),
-            'aria-current': entry.turn === active ? 'true' : undefined,
-            onClick: () => { onPick(entry) },
+            'aria-current': entry.turn === current.active ? 'true' : undefined,
+            onClick: () => { void current.jump(entry) },
           },
           h('span', { className: 'dshReviseChan-outlineTurn' },
             h('span', null, t('outline.turn', { turn: entry.turn })),
-            entry.turn === active ? h('span', null, t('outline.current')) : null),
+            entry.turn === current.active ? h('span', null, t('outline.current')) : null),
           entry.prompt === ''
             ? null
             : h('div', { className: 'dshReviseChan-outlinePrompt' }, entry.prompt),
           entry.response === ''
             ? null
-            : h('div', { className: 'dshReviseChan-outlineResponse' }, entry.response)))) )
+            : h('div', { className: 'dshReviseChan-outlineResponse' }, entry.response)))))
+      return h(React.Fragment, null, h('style', { key: 'style' }, OUTLINE_CSS), toggle, panel)
     }
 
     // ---------------------------------------------------------------------
@@ -810,6 +904,10 @@ window.__ModuleLoader__.load({
         ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-revise-chan: dictionaries')
         const t = ctx.locale.bind(NS)
         const editor = createSnapshotSource(null)
+        /** What the Session-scoped bridge publishes for the floating outline. */
+        const outline = createSnapshotSource(null)
+        /** Per-Session open flags, remembered for this page load only. */
+        const outlineOpen = new Map()
 
         /** @param entry - one outline row. */
         async function jumpToTurn(entry) {
@@ -827,30 +925,6 @@ window.__ModuleLoader__.load({
             }
           }
           await revealTurn(entry.turn)
-        }
-
-        /** @returns whether this profile has the outline page type in force. */
-        function outlineReady() {
-          const tabs = ctx.get('sidebarRightTabs')
-          if (tabs === undefined || typeof tabs.get !== 'function') return false
-          try {
-            return tabs.get(TAB_KIND) !== undefined
-          } catch (error) {
-            // A registry that cannot answer has no page for this kind to open.
-            return false
-          }
-        }
-
-        /** Open the outline page in the right sidebar, when this profile has one. */
-        function openOutline() {
-          const sidebarRight = ctx.get('sidebarRight')
-          if (sidebarRight === undefined || typeof sidebarRight.openTab !== 'function') return
-          try {
-            sidebarRight.openTab(TAB_KIND)
-          } catch (error) {
-            // No session on screen, or its surface store was never minted, so
-            // there is no outline pane to open; the header button stays inert.
-          }
         }
 
         /**
@@ -903,8 +977,11 @@ window.__ModuleLoader__.load({
           const byId = sessions.list.getSnapshot().byId
           const current = byId === undefined ? undefined : byId[request.sessionId]
           const base = titleBase(current === undefined ? '' : current.title, t('untitled'))
-          await renameSession(sessions, childId, `${base}·${stampOf(Date.now())}`)
-          await renameSession(sessions, request.sessionId, `${base}·${stampOf(planned.value.messageTime)}`)
+          // The branch keeps whatever the conversation was called: the reader
+          // stays in "the same" conversation. Only the version it supersedes is
+          // stamped, and `titleBase` clips it so the stamp fits the Host's byte
+          // budget.
+          await renameSession(sessions, request.sessionId, `${base}·${stampOf(Date.now())}`)
           await uiWorkspace.archiveSession(request.sessionId)
           uiWorkspace.openSession(childId)
           return childId
@@ -938,34 +1015,24 @@ window.__ModuleLoader__.load({
           }),
         }, EditorOverlay))
 
-        // 3. The outline toggle and its always-visible sidebar page.
-        ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
-          name: 'conversation.session.header.utilities',
+        // 3. The outline: a Session-scoped bridge publishes the turn list and the
+        //    jump closure; the frame-wide floating panel renders them.
+        ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+          name: 'conversation.input.dock',
+          id: 'revise-chan-outline-bridge',
+          inject: () => ({ publish: outline.set, jumpToTurn }),
+        }, OutlineBridge))
+        ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+          name: 'shell.overlay',
           id: 'revise-chan-outline',
-          order: 30,
+          order: 60,
           locale: NS,
-          inject: () => ({ openOutline, outlineReady }),
-        }, OutlineButton))
-        const tabs = ctx.get('sidebarRightTabs')
-        if (tabs !== undefined && typeof tabs.register === 'function') {
-          ctx.effect(() => tabs.register({
-            id: TAB_ID,
-            kind: TAB_KIND,
-            priority: 'builtin',
-            title: () => t('outline.title'),
-          }), 'dsh-revise-chan: outline page type')
-        }
-        ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
-          name: 'sidebar.right.pane.tab',
-          key: TAB_ID,
-          locale: NS,
-          inject: (sessionId) => ({ jump: entry => jumpToTurn({ ...entry, sessionId }) }),
-        }, OutlineBody))
-        ctx.slots.inject('sidebar.right.pane.tab.title', () => ctx.slots.register({
-          name: 'sidebar.right.pane.tab.title',
-          key: TAB_ID,
-          locale: NS,
-        }, OutlineTitle))
+          inject: () => ({
+            hooks: { outline },
+            wasOpen: sessionId => outlineOpen.get(sessionId) === true,
+            rememberOpen: (sessionId, open) => { outlineOpen.set(sessionId, open) },
+          }),
+        }, OutlineFloat))
       },
     }
   },

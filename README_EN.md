@@ -13,8 +13,8 @@ Three things that make a [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 ![The edit dialog, and the byline on the answer's clock row](docs/dialog.png)
 
 - **Byline** — every answer's clock row gains `model | provider`, read from that turn's billed route (`turn-tail.tokenUsage.routes`), falling back to the message's own `providerMetadata` when the Chat fold does not carry it.
-- **Revision** — a pencil sits beside the copy button. It opens an in-app dialog over the answer body; saving branches from that answer's **human prompt**, so the branch's answer *is* your rewritten text. The branch is titled `<title>·<save time>`; the source session is titled `<title>·<original answer time>` and archived.
-- **Outline** — a header button opens a permanent outline page in the right sidebar: one row per started turn (prompt + response preview), the current turn highlighted, and any row jumps to its turn (turns outside the loaded window page history in through the `turnOutline` projection's `seq` first).
+- **Revision** — a pencil sits beside the copy button. It opens an in-app dialog over the answer body; saving branches from that answer's **human prompt**, so the branch's answer *is* your rewritten text and the branch **keeps the original title** (you stay in "the same" conversation). The version it supersedes gains a `·<edit time>` suffix and is archived.
+- **Outline** — a floating button at the conversation's top-right opens a list pinned beside the conversation column: one row per started turn (prompt + response preview), the current turn highlighted, and any row jumps to its turn (turns outside the loaded window page history in through the `turnOutline` projection's `seq` first). It is an overlay rather than a right-sidebar page, so it costs no column width, needs no sidebar, and leaves the Host's own hover rail untouched.
 
 ## Install
 
@@ -49,7 +49,7 @@ Restart the running `dsh web` afterwards: the Host half has to load the `revise-
 A dsh session log is append-only and deep-frozen, and `assistant/message` **cannot** be surface-replaced (the operation must cite the node it shadows, while that event type forbids `sourceEventSeqs`). Rewriting the answer in place is therefore impossible on 0.2.x. 稿本 takes a fully declared route instead:
 
 1. `revise-chan/plan` finds the **human prompt** of the turn whose answer was edited (only a `user/message` with `source.kind === 'user'` counts — injected context does not).
-2. The Browser half forks there with `sessions.fork({ atSeq })`: the child inherits everything through the prompt — the question is still there, the original answer is not, and the fork's own synthetic plain `turn/end` closes the cut turn.
+2. The Browser half forks there with `sessions.fork({ atSeq })`: the child inherits everything through the prompt, title included — the question is still there, the original answer is not, and the fork's own synthetic plain `turn/end` closes the cut turn.
 3. `revise-chan/revise` **appends** one complete turn to that live child: `turn/start` (reusing the edited turn's number) → `step/start` → `assistant/message` (your text, same message id / provider / model, reasoning and images kept, tool calls dropped) → `step/end` → `turn/end`.
 
 One real revision looks like this in the log:
@@ -75,15 +75,16 @@ The model-visible surface (the canonical fold) reads `…, question, revised ans
 - A revision **drops the edited turn's tool calls**: those tools belong to the discarded branch and the new one cannot claim their results. Reasoning and images are kept.
 - A turn already swallowed by a compaction summary cannot be revised: the Host answers `message-not-found` and the dialog says so.
 - Session titles cap at 80 UTF-8 bytes (`session-title`'s `maxTitleBytes`) and the Host **truncates** rather than rejects. The plugin therefore clips the inherited title to 62 bytes before appending `·YYYY-MM-DD HH:mm`, so the stamp survives; re-editing strips the previous stamp first.
-- The outline's jump and active-turn highlight read the anchors the Host publishes for its own navigation (`[data-conversation-scroll]`, `[data-chat-turn]`). If a future version renames them, only jumping and highlighting go quiet — the outline list itself is unaffected.
-- A permanent outline page in the right sidebar is the closest shape a plugin can offer: the Host does not expose transcript scrolling to other plugins, hence the DOM anchors above.
+- The outline's jump, its active-turn highlight, and the floating button's position all read the anchors the Host publishes for its own navigation (`[data-conversation-scroll]`, `[data-chat-turn]`). If a future version renames them, only those three go quiet (no button, no follow) — the outline data itself is unaffected.
+- The floating panel is measured into place at the conversation scrollport's top-right (`ResizeObserver` plus resize/scroll following), and disappears entirely when no Conversation is mounted (another main panel, or the trajectory view): the outline serves the chat transcript.
+- The panel deliberately does **not** close on outside clicks (only ✕, the toggle, or Escape), so it can stay up while you read; each session remembers whether it was open, for the page's lifetime.
 
 ## Implementation
 
 | File | Role |
 |---|---|
 | `index.js` | Host half: the `revise-chan` Remote namespace (`plan` / `revise`). The Remote method marker is installed directly as the `@deepseek-ai/dsh-typert-protocol/remote-methods` descriptor, so plain JavaScript needs neither decorators nor generated typert output. |
-| `client.js` | Browser half: byline and edit action (`conversation.chat.assistant-actions`), editor dialog (`shell.overlay`), outline toggle (`conversation.session.header.utilities`) and outline page (`sidebar.right.pane.tab`). |
+| `client.js` | Browser half: byline and edit action (`conversation.chat.assistant-actions`), editor dialog (`shell.overlay`), outline bridge (`conversation.input.dock`, publish-only) and the floating outline (`shell.overlay`). |
 | `cordis.patch.yml` | Inserts the `dsh-revise-chan` row into the profile's Loader configuration. |
 
 The Browser half only `require`s `react` and imports no Harness Client package; all styling uses `--dsw-*` theme tokens and all copy goes through `locale.register` dictionaries (Chinese + English).
@@ -110,5 +111,5 @@ Verified on dsh `0.2.0-rc.2`:
 
 - **Real gateway** — `ctx.typertGateway.invoke({ namespace: 'revise-chan', method: 'plan' | 'revise', args: { request } })` resolves and runs; the branch folds to `[question, revised answer]` and `turnBoundary.lastTurn` keeps the edited turn's number.
 - **Real engine** — `buildForkSeed` + `Session.create` reproduce the branch, and `deriveMessages()` matches the fold above.
-- **Browser half** — every registered entry renders from realistic slot props, `saveRevision` emits the expected RPC payloads / fork / renames / archive / open, and all six contributions are live (`active: true`) on a running page.
+- **Browser half** — `tools/lib/mini-react.mjs` supplies a miniature React runtime with state and effects, so the checks cover the interactions themselves: byline text, pencil gating and hand-off, editor draft, the outline toggle appearing, the panel opening and listing turns, the active-turn highlight, a jump from an unloaded turn paging in first, closing, and withdrawal when the Conversation unmounts — plus `saveRevision`'s RPC payloads, fork boundary, the new title rule (only the superseded session is stamped) and the archive order.
 - **Not verified** — visual layout, colours and hover feel in a real browser; that part needs human eyes.

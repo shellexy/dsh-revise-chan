@@ -15,7 +15,7 @@ bash tools/verify-all.sh --e2e    # 再启一个一次性 profile，走真实 Ty
 |---|---|---|
 | `verify-host.mjs` | Typert Gateway 的 SRC 发现规则能否从活着的服务上 claim `revise-chan/plan` / `revise-chan/revise`（binding 形状、Remote marker、参数名反射），以及 `plan` / `revise` 在事件形状真实的会话上的行为与全部业务错误码 | 能解析 dsh 包（见下） |
 | `verify-engine.mjs` | 用真实的 `@deepseek-ai/dsh-session`：`buildForkSeed` 切在提问处 → 分支折叠为 `[提问1, 回答1, 提问2]`；追加修订轮后折叠为 `[提问1, 回答1, 提问2, 修订稿]`；继承前缀逐事件与来源一致 | 能解析 dsh 包 |
-| `verify-client.mjs` | Browser 半：`apply` 只注册六个槽位项与一个右侧栏页类型；署名/铅笔/对话框/大纲页用真实 slot props 渲染出的元素树；`saveRevision` 发出的 RPC 载荷、fork 参数、改名与归档顺序、标题字节预算、业务失败的本地化文案 | 只需 Node（自带 React stand-in） |
+| `verify-client.mjs` | Browser 半：`apply` 只注册五个槽位项；署名/铅笔/对话框/悬浮大纲在带状态与副作用的最小 React 运行时（`lib/mini-react.mjs`）里真实交互——按钮出现、面板展开列轮次、高亮当前轮、点未载入轮次先 `loadThrough` 再滚动、关闭、会话卸载后撤回；`saveRevision` 发出的 RPC 载荷、fork 参数、新标题规则、归档顺序、标题字节预算、业务失败的本地化文案 | 只需 Node（`lib/mini-react.mjs` 提供 React 运行时） |
 | `verify-e2e.sh` | 端到端：在 `.tmp/` 里造一个只含 `dsh-base` 的一次性 `DSH_HOME`，把**工作副本**按绝对路径插进去启动，用 `ctx.typertGateway.invoke({ namespace: 'revise-chan', … , args: { request } })` 真调 `plan` / `revise`，并断言分支折叠与 `turnBoundary.lastTurn` | `dsh` 在 PATH 上；不需要模型与凭据 |
 
 ## 模块解析
@@ -30,6 +30,6 @@ bash tools/verify-all.sh --e2e    # 再启一个一次性 profile，走真实 Ty
 
 ## 这些脚本不验证什么
 
-- 真实渲染与视觉：`verify-client.mjs` 用 React stand-in 当纯函数调用组件，能看到元素树和到达宿主的取值，但看不到布局、配色、悬停观感——那部分只能在浏览器里人工确认。
+- 真实渲染与视觉：`verify-client.mjs` 的小型 React 运行时能跑状态与副作用、验证交互逻辑，但没有布局引擎——位置、配色、悬停观感只能在浏览器里人工确认。
 - Web UI 的实时链路：`verify-e2e.sh` 启的是无 UI 的 profile，走的是真实的网关与账号无关的路径；浏览器 cookies/鉴权属于 dsh 自身行为，不在覆盖范围内。
 - 真实模型：全部脚本都不发模型请求，也不读凭据。
