@@ -1,6 +1,6 @@
 {
   "name": "dsh-revise-chan",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "让 dsh 可以修改 AI 回答内容 + 固定显示大纲：回答署名、修订分支、常驻大纲侧栏",
   "type": "module",
   "license": "MIT",

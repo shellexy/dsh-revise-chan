@@ -76,8 +76,9 @@ The model-visible surface (the canonical fold) reads `…, question, revised ans
 - A turn already swallowed by a compaction summary cannot be revised: the Host answers `message-not-found` and the dialog says so.
 - Session titles cap at 80 UTF-8 bytes (`session-title`'s `maxTitleBytes`) and the Host **truncates** rather than rejects. The plugin therefore clips the inherited title to 62 bytes before appending `·YYYY-MM-DD HH:mm`, so the stamp survives; re-editing strips the previous stamp first.
 - The outline's jump, its active-turn highlight, and the floating button's position all read the anchors the Host publishes for its own navigation (`[data-conversation-scroll]`, `[data-chat-turn]`). If a future version renames them, only those three go quiet (no button, no follow) — the outline data itself is unaffected.
-- The floating panel is measured into place at the conversation scrollport's top-right (`ResizeObserver` plus resize/scroll following), and disappears entirely when no Conversation is mounted (another main panel, or the trajectory view): the outline serves the chat transcript.
-- The panel deliberately does **not** close on outside clicks (only ✕, the toggle, or Escape), so it can stay up while you read; each session remembers whether it was open, for the page's lifetime.
+- The panel's position **and height** are measured: pinned to the conversation scrollport's top-right, as tall as "scrollport minus composer" (the Host publishes `--dsh-composer-height` on the scrollport; reading nothing falls back to the rail's own 152px), so it never covers the send button. It disappears entirely when no Conversation is mounted (another main panel, or the trajectory view): the outline serves the chat transcript.
+- Each row is one line of question plus two lines of answer preview (the rail's own density) and spends no line on "Turn N"; only a turn with **neither** a prompt nor a response preview (image-only or command-only turns) falls back to the turn number in that slot, and the number always stays in the hover title and `aria-label`.
+- Any press outside the panel and its toggle collapses it (captured `pointerdown`), while a press inside (jumping to another turn) leaves it up — as do Escape, ✕, and the toggle. Each session remembers whether it was open, for the page's lifetime.
 
 ## Implementation
 

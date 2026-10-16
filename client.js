@@ -621,7 +621,9 @@ window.__ModuleLoader__.load({
 .dshReviseChan-floatButton:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: 2px; }
 .dshReviseChan-floatPanel {
   position: fixed; z-index: 20; display: flex; flex-direction: column;
-  width: 300px; max-height: min(70vh, 560px); overflow: hidden; pointer-events: auto;
+  /* The height is measured into place (the Conversation band above the composer);
+     this clamp only guards a stale measurement. */
+  width: 300px; max-height: calc(100vh - 64px); overflow: hidden; pointer-events: auto;
   border: 1px solid var(--dsw-alias-border-l2, transparent); border-radius: 12px;
   background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base, canvas));
   color: var(--dsw-alias-label-primary, canvastext);
@@ -643,7 +645,7 @@ window.__ModuleLoader__.load({
 .dshReviseChan-outlineEmpty { padding: 16px 12px; font-size: 13px; color: var(--dsw-alias-label-secondary, currentColor); }
 .dshReviseChan-outlineRow {
   display: block; width: 100%; box-sizing: border-box; text-align: left; cursor: pointer;
-  padding: 7px 9px; margin: 0 0 2px; border: 0; border-left: 2px solid transparent; border-radius: 8px;
+  padding: 6px 9px; margin: 0 0 2px; border: 0; border-left: 2px solid transparent; border-radius: 8px;
   background: transparent; color: var(--dsw-alias-label-primary, canvastext); font: inherit;
 }
 .dshReviseChan-outlineRow:hover { background: var(--dsw-alias-bg-layer-1); }
@@ -652,14 +654,14 @@ window.__ModuleLoader__.load({
   border-left-color: var(--dsw-alias-brand-primary, currentColor);
 }
 .dshReviseChan-outlineRow:focus-visible { outline: 1px solid var(--dsw-alias-brand-primary, currentColor); outline-offset: -2px; }
-.dshReviseChan-outlineTurn { display: flex; gap: 6px; align-items: baseline; font-size: 11px; color: var(--dsw-alias-label-secondary, currentColor); }
+/* One line of question, two of answer: the densest the rail's own previews get. */
 .dshReviseChan-outlinePrompt {
-  margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--dsw-alias-label-primary, canvastext);
-  overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  font-size: 13px; line-height: 17px; color: var(--dsw-alias-label-primary, canvastext);
+  overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1;
 }
 .dshReviseChan-outlineResponse {
-  margin-top: 2px; font-size: 12px; line-height: 17px; color: var(--dsw-alias-label-secondary, currentColor);
-  overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-secondary, currentColor);
+  overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
 }
 `
 
@@ -779,6 +781,8 @@ window.__ModuleLoader__.load({
       const sessionId = current === null || current === undefined ? null : current.sessionId
       const [open, setOpen] = useState(false)
       const [anchor, setAnchor] = useState(null)
+      const panelRef = useRef(null)
+      const buttonRef = useRef(null)
 
       // Ride the Conversation column: its scrollport is the anchor the Host
       // publishes, so the toggle follows panel and window size changes.
@@ -793,9 +797,14 @@ window.__ModuleLoader__.load({
             return
           }
           const rect = container.getBoundingClientRect()
+          // The panel stops above the composer: the Host publishes its height on
+          // the scrollport, and 152px is the rail's own fallback.
+          const published = Number.parseFloat(getComputedStyle(container).getPropertyValue('--dsh-composer-height'))
+          const composer = Number.isFinite(published) && published > 0 ? published : 152
           setAnchor({
             top: Math.round(rect.top + 8),
             right: Math.round(Math.max(8, window.innerWidth - rect.right + 12)),
+            height: Math.round(Math.max(240, rect.height - composer - 16)),
           })
         }
         const schedule = () => {
@@ -834,13 +843,26 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         if (!open) return undefined
         const onKey = (event) => { if (event.key === 'Escape') dismiss() }
+        // Any press outside the panel or its toggle takes the outline down; a
+        // press inside (a row, the header) leaves it up for the next jump.
+        const onPress = (event) => {
+          const target = event.target
+          if (panelRef.current !== null && panelRef.current.contains(target)) return
+          if (buttonRef.current !== null && buttonRef.current.contains(target)) return
+          dismiss()
+        }
         window.addEventListener('keydown', onKey, true)
-        return () => { window.removeEventListener('keydown', onKey, true) }
+        window.addEventListener('pointerdown', onPress, true)
+        return () => {
+          window.removeEventListener('keydown', onKey, true)
+          window.removeEventListener('pointerdown', onPress, true)
+        }
       }, [open, dismiss])
 
       if (current === null || current === undefined || anchor === null) return null
       const toggle = h('button', {
         key: 'toggle',
+        ref: buttonRef,
         type: 'button',
         className: 'dshReviseChan-floatButton',
         style: { top: `${String(anchor.top)}px`, right: `${String(anchor.right)}px` },
@@ -856,8 +878,13 @@ window.__ModuleLoader__.load({
       const turns = current.turns
       const panel = h('div', {
         key: 'panel',
+        ref: panelRef,
         className: 'dshReviseChan-floatPanel',
-        style: { top: `${String(anchor.top + 36)}px`, right: `${String(anchor.right)}px` },
+        style: {
+          top: `${String(anchor.top + 36)}px`,
+          right: `${String(anchor.right)}px`,
+          height: `${String(anchor.height)}px`,
+        },
         role: 'navigation',
         'aria-label': t('outline.title'),
       },
@@ -873,24 +900,28 @@ window.__ModuleLoader__.load({
       turns.length === 0
         ? h('div', { className: 'dshReviseChan-outlineEmpty' }, t('outline.empty'))
         : h('div', { className: 'dshReviseChan-panelList' },
-          turns.map(entry => h('button', {
-            key: String(entry.turn),
-            type: 'button',
-            className: 'dshReviseChan-outlineRow',
-            'data-active': entry.turn === current.active ? true : undefined,
-            title: entry.loaded ? t('outline.jump', { turn: entry.turn }) : t('outline.pending'),
-            'aria-current': entry.turn === current.active ? 'true' : undefined,
-            onClick: () => { void current.jump(entry) },
-          },
-          h('span', { className: 'dshReviseChan-outlineTurn' },
-            h('span', null, t('outline.turn', { turn: entry.turn })),
-            entry.turn === current.active ? h('span', null, t('outline.current')) : null),
-          entry.prompt === ''
-            ? null
-            : h('div', { className: 'dshReviseChan-outlinePrompt' }, entry.prompt),
-          entry.response === ''
-            ? null
-            : h('div', { className: 'dshReviseChan-outlineResponse' }, entry.response)))))
+          turns.map(entry => {
+            const label = t('outline.turn', { turn: entry.turn })
+            const active = entry.turn === current.active
+            const heading = entry.prompt === '' && entry.response === '' ? label : entry.prompt
+            return h('button', {
+              key: String(entry.turn),
+              type: 'button',
+              className: 'dshReviseChan-outlineRow',
+              'data-active': active ? true : undefined,
+              // The number leaves the layout but stays reachable: a preview-less
+              // turn still reads as a turn, and every row names itself on hover.
+              title: `${label}${active ? ` · ${t('outline.current')}` : ''}`
+                + ` — ${entry.loaded ? t('outline.jump', { turn: entry.turn }) : t('outline.pending')}`,
+              'aria-label': label,
+              'aria-current': active ? 'true' : undefined,
+              onClick: () => { void current.jump(entry) },
+            },
+            heading === '' ? null : h('div', { className: 'dshReviseChan-outlinePrompt' }, heading),
+            entry.response === ''
+              ? null
+              : h('div', { className: 'dshReviseChan-outlineResponse' }, entry.response))
+          })))
       return h(React.Fragment, null, h('style', { key: 'style' }, OUTLINE_CSS), toggle, panel)
     }
 

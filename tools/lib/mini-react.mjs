@@ -63,9 +63,37 @@ export function createMiniReact() {
 
   const Fragment = Symbol('Fragment')
 
+  /**
+   * Attach a ref-like element to a plain element tree node: the node itself is
+   * the "DOM node", and `contains` walks its children so outside-press logic is
+   * testable without a DOM.
+   * @param element - the node just built.
+   * @returns the node.
+   */
+  function attachRef(element) {
+    element.contains = target => {
+      if (target === element) return true
+      return flatten(element.props.children).some(child => child !== null && typeof child === 'object'
+        && typeof child.contains === 'function' && child.contains(target))
+    }
+    const ref = element.props.ref
+    if (ref !== null && typeof ref === 'object') ref.current = element
+    return element
+  }
+
+  /**
+   * Flatten a children list the way React renders it.
+   * @param children - nested children.
+   * @returns every leaf in order.
+   */
+  function flatten(children) {
+    if (!Array.isArray(children)) return [children]
+    return children.flatMap(child => flatten(child))
+  }
+
   const React = {
     Fragment,
-    createElement: (type, props, ...children) => ({ type, props: { ...(props ?? {}), children } }),
+    createElement: (type, props, ...children) => attachRef({ type, props: { ...(props ?? {}), children } }),
     memo: component => component,
     /** @param initial - state or a lazy initialiser. */
     useState(initial) {

@@ -81,7 +81,21 @@ globalThis.document = {
   addEventListener: () => {},
   removeEventListener: () => {},
 }
-globalThis.window = { innerWidth: 1280, addEventListener: () => {}, removeEventListener: () => {} }
+/** Window listeners the components install, so the checks can fire them. */
+const listeners = new Map()
+const target = {
+  addEventListener: (type, handler) => {
+    const set = listeners.get(type) ?? new Set()
+    set.add(handler)
+    listeners.set(type, set)
+  },
+  removeEventListener: (type, handler) => { listeners.get(type)?.delete(handler) },
+}
+globalThis.window = { innerWidth: 1280, addEventListener: target.addEventListener, removeEventListener: target.removeEventListener }
+/** Fire one window event at every current listener. @param type - event name. @param event - event payload. */
+const fire = (type, event) => { for (const handler of [...(listeners.get(type) ?? [])]) handler(event) }
+// The Host publishes the composer height on the scrollport; the panel subtracts it.
+globalThis.getComputedStyle = () => ({ getPropertyValue: name => (name === '--dsh-composer-height' ? '180px' : '') })
 globalThis.requestAnimationFrame = fn => { fn(); return 1 }
 globalThis.cancelAnimationFrame = () => {}
 globalThis.ResizeObserver = class ResizeObserver {
@@ -238,6 +252,15 @@ const outlineFace = outlineRow.inject()
 /** @param selector - selector the component passes. */
 const useOutline = selector => selector(outlineFace.hooks.outline.getSnapshot())
 
+/**
+ * Paint the outline with its panel open.
+ * @returns the painted tree, which carries the panel at `children[2]`.
+ */
+const openOutline = () => {
+  const closed = paintOutline()
+  if (closed.props.children.length === 2) closed.props.children[1].props.onClick()
+  return paintOutline()
+}
 const bridgeProps = {
   t,
   sessionId: 'session-1',
@@ -280,8 +303,10 @@ check('the toggle appears, opens the panel, and lists every turn', () => {
   assertEqual(panel.props.role, 'navigation', 'the panel differs')
   const rows = panel.props.children[1].props.children[0]
   assertEqual(rows.length, 2, 'the panel did not list both turns')
-  assertEqual(rows[0].props.children[1].props.children, ['first question'], 'prompt preview differs')
-  assertEqual(rows[1].props.children[2].props.children, ['third answer'], 'response preview differs')
+  assertEqual(rows[0].props.children[0].props.children, ['first question'], 'prompt preview differs')
+  assertEqual(rows[1].props.children[1].props.children, ['third answer'], 'response preview differs')
+  assertEqual(rows[0].props.title.startsWith('outline.turn'), true, 'the row does not name its turn')
+  assertEqual(opened.props.children[2].props.style.height, '404px', 'the panel does not use the conversation band')
 })
 check('the active turn is highlighted from the scrollport rows', () => {
   const opened = paintOutline()
@@ -302,6 +327,32 @@ check('closing the panel keeps the toggle', () => {
   opened.props.children[2].props.children[0].props.children[1].props.onClick()
   const closed = paintOutline()
   assertEqual(closed.props.children.length, 2, 'the panel did not close')
+})
+check('a preview-less turn still reads as a turn', () => {
+  rt.render(bridgeRow.component, {
+    ...bridgeProps,
+    useProjection: () => [{ turn: 1, seq: 5, prompt: '', response: '' }],
+  })
+  const rows = openOutline().props.children[2].props.children[1].props.children[0]
+  // The Response slot is passed as `null` (React drops it); only the label renders.
+  assertEqual(rows[0].props.children.filter(child => child !== null).length, 1, 'the fallback row carries more than the label')
+  assertEqual(rows[0].props.children[0].props.children, ['outline.turn{"turn":1}'], 'the fallback label differs')
+  rt.render(bridgeRow.component, bridgeProps)
+})
+check('a press outside the open outline collapses it', () => {
+  const first = openOutline()
+  assertEqual(first.props.children.length, 3, 'the panel did not open')
+  // Every render mints fresh elements and the panel's ref follows the newest, so
+  // each press is aimed with a target read from the tree it is fired against.
+  fire('pointerdown', { target: first.props.children[1] })
+  const second = paintOutline()
+  assertEqual(second.props.children.length, 3, 'a press on the toggle collapsed the panel')
+  const rowOfSecond = second.props.children[2].props.children[1].props.children[0][0]
+  fire('pointerdown', { target: rowOfSecond })
+  const third = paintOutline()
+  assertEqual(third.props.children.length, 3, 'a press inside the panel collapsed it')
+  fire('pointerdown', { target: { nodeName: 'BODY' } })
+  assertEqual(paintOutline().props.children.length, 2, 'a press outside did not collapse the panel')
 })
 check('unmounting the conversation withdraws the outline', () => {
   rt.unmount(bridgeRow.component)
